@@ -1,10 +1,10 @@
 /**
  * 술렌다 Header 컴포넌트
- * Sticky + Blur 효과 헤더
+ * Sticky + Glassmorphism Blur 효과 헤더
  */
 
 import React from 'react';
-import { View, StyleSheet, Platform, ViewStyle } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './Text';
@@ -37,17 +37,32 @@ export function Header({ title, subtitle, emoji, rightElement }: HeaderProps) {
     </View>
   );
 
-  // Web에서는 BlurView가 제대로 작동하지 않을 수 있어서 fallback 처리
+  // Web에서는 CSS backdrop-filter 사용
   if (Platform.OS === 'web') {
+    // Web용 인라인 스타일로 backdrop-filter 적용
+    const webStyle = {
+      position: 'absolute' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 100,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255, 255, 255, 0.3)',
+      backgroundColor: 'rgba(240, 248, 255, 0.7)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+    };
+
     return (
-      <View style={[styles.container, styles.webBlur as ViewStyle]}>
+      <div style={webStyle as React.CSSProperties}>
         {content}
-      </View>
+      </div>
     );
   }
 
   return (
-    <BlurView intensity={80} tint="light" style={styles.container}>
+    <BlurView intensity={60} tint="light" style={styles.container}>
+      <View style={styles.blurOverlay} />
       {content}
     </BlurView>
   );
@@ -61,10 +76,11 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 100,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
+    borderBottomColor: 'rgba(255, 255, 255, 0.3)',
   },
-  webBlur: {
-    backgroundColor: 'rgba(240, 248, 255, 0.85)',
+  blurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(240, 248, 255, 0.5)',
   },
   content: {
     paddingHorizontal: spacing.lg,
