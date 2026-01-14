@@ -47,10 +47,10 @@ export function Header({ title, subtitle, emoji, rightElement }: HeaderProps) {
       right: 0,
       zIndex: 100,
       borderBottomWidth: 1,
-      borderBottomColor: 'rgba(255, 255, 255, 0.3)',
-      backgroundColor: 'rgba(240, 248, 255, 0.7)',
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
+      borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: 'rgba(240, 248, 255, 0.4)',
+      backdropFilter: 'blur(40px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(40px) saturate(180%)',
     };
 
     return (
