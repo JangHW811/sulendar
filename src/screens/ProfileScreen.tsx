@@ -1,0 +1,302 @@
+/**
+ * 술렌다 - 프로필 설정 화면
+ */
+
+import React, { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  StatusBar,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Text, Button, Input, Card, Header } from '../components/ui';
+import { colors } from '../theme/colors';
+import { spacing, borderRadius } from '../theme/spacing';
+
+interface Props {
+  onLogout?: () => void;
+}
+
+export function ProfileScreen({ onLogout }: Props) {
+  const [profile, setProfile] = useState({
+    name: '홍길동',
+    email: 'hong@example.com',
+    weight: '70',
+    height: '175',
+  });
+  const [isEditing, setIsEditing] = useState(false);
+
+  const handleSave = () => {
+    // TODO: Supabase 연동
+    setIsEditing(false);
+    Alert.alert('저장 완료', '프로필이 업데이트되었습니다.');
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      '로그아웃',
+      '정말 로그아웃 하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '로그아웃', style: 'destructive', onPress: onLogout },
+      ]
+    );
+  };
+
+  const menuItems = [
+    { icon: '🔔', label: '알림 설정', onPress: () => {} },
+    { icon: '📊', label: '데이터 내보내기', onPress: () => {} },
+    { icon: '🔒', label: '개인정보 처리방침', onPress: () => {} },
+    { icon: '📄', label: '이용약관', onPress: () => {} },
+    { icon: '❓', label: '도움말', onPress: () => {} },
+  ];
+
+  return (
+    <LinearGradient
+      colors={[colors.background.primary, '#E8F4FC']}
+      style={styles.gradient}
+    >
+      <StatusBar barStyle="dark-content" />
+
+      {/* Sticky Header */}
+      <Header title="프로필" emoji="👤" />
+
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Profile Card */}
+        <Card style={styles.profileCard}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {profile.name.charAt(0)}
+              </Text>
+            </View>
+            <View style={styles.profileInfo}>
+              <Text variant="heading" color="primary">{profile.name}</Text>
+              <Text variant="caption" color="secondary">{profile.email}</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => setIsEditing(!isEditing)}
+          >
+            <Text variant="body" color="primary">
+              {isEditing ? '취소' : '수정'}
+            </Text>
+          </TouchableOpacity>
+        </Card>
+
+        {/* Body Info */}
+        <Card style={styles.bodyCard}>
+          <Text variant="title" color="primary" style={styles.sectionTitle}>
+            신체 정보
+          </Text>
+          <Text variant="caption" color="secondary" style={styles.sectionSubtitle}>
+            AI 상담 시 정확한 분석에 사용됩니다
+          </Text>
+
+          {isEditing ? (
+            <View style={styles.editForm}>
+              <Input
+                label="이름"
+                value={profile.name}
+                onChangeText={(v) => setProfile((p) => ({ ...p, name: v }))}
+              />
+              <View style={styles.row}>
+                <View style={styles.halfInput}>
+                  <Input
+                    label="체중 (kg)"
+                    value={profile.weight}
+                    onChangeText={(v) => setProfile((p) => ({ ...p, weight: v }))}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={styles.halfInput}>
+                  <Input
+                    label="키 (cm)"
+                    value={profile.height}
+                    onChangeText={(v) => setProfile((p) => ({ ...p, height: v }))}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+              <Button variant="primary" size="md" fullWidth onPress={handleSave}>
+                저장하기
+              </Button>
+            </View>
+          ) : (
+            <View style={styles.bodyStats}>
+              <View style={styles.bodyStat}>
+                <Text variant="caption" color="secondary">체중</Text>
+                <Text variant="heading" color="primary">{profile.weight}kg</Text>
+              </View>
+              <View style={styles.bodyStatDivider} />
+              <View style={styles.bodyStat}>
+                <Text variant="caption" color="secondary">키</Text>
+                <Text variant="heading" color="primary">{profile.height}cm</Text>
+              </View>
+              <View style={styles.bodyStatDivider} />
+              <View style={styles.bodyStat}>
+                <Text variant="caption" color="secondary">BMI</Text>
+                <Text variant="heading" color="primary">
+                  {(Number(profile.weight) / Math.pow(Number(profile.height) / 100, 2)).toFixed(1)}
+                </Text>
+              </View>
+            </View>
+          )}
+        </Card>
+
+        {/* Menu List */}
+        <Card style={styles.menuCard}>
+          {menuItems.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.menuItem,
+                index < menuItems.length - 1 && styles.menuItemBorder,
+              ]}
+              onPress={item.onPress}
+            >
+              <View style={styles.menuItemLeft}>
+                <Text style={styles.menuIcon}>{item.icon}</Text>
+                <Text variant="body" color="primary">{item.label}</Text>
+              </View>
+              <Text variant="body" color="muted">→</Text>
+            </TouchableOpacity>
+          ))}
+        </Card>
+
+        {/* Logout */}
+        <Button
+          variant="ghost"
+          size="lg"
+          fullWidth
+          onPress={handleLogout}
+          style={styles.logoutButton}
+        >
+          로그아웃
+        </Button>
+
+        {/* App Version */}
+        <Text variant="caption" color="muted" center style={styles.version}>
+          술렌다 v1.0.0
+        </Text>
+      </ScrollView>
+    </LinearGradient>
+  );
+}
+
+const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingTop: 100,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  profileCard: {
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  avatarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary.main,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text.inverse,
+  },
+  profileInfo: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  editButton: {
+    position: 'absolute',
+    top: spacing.lg,
+    right: spacing.lg,
+  },
+  bodyCard: {
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    marginBottom: spacing.xs,
+  },
+  sectionSubtitle: {
+    marginBottom: spacing.md,
+  },
+  bodyStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bodyStat: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  bodyStatDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: colors.border.default,
+  },
+  editForm: {
+    gap: spacing.sm,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  halfInput: {
+    flex: 1,
+  },
+  menuCard: {
+    padding: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  menuItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  menuIcon: {
+    fontSize: 20,
+  },
+  logoutButton: {
+    marginBottom: spacing.md,
+  },
+  version: {
+    marginTop: spacing.sm,
+  },
+});

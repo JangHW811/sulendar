@@ -8,16 +8,16 @@ import { TextStyle } from 'react-native';
 export const typography = {
   // Display - 큰 제목
   display: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: '700',
-    lineHeight: 40,
+    lineHeight: 34,
   } as TextStyle,
 
   // Heading - 섹션 제목
   heading: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    lineHeight: 32,
+    lineHeight: 28,
   } as TextStyle,
 
   // Title - 카드/항목 제목

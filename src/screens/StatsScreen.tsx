@@ -1,0 +1,339 @@
+/**
+ * 술렌다 - 통계 대시보드 화면
+ */
+
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Text, Card, BarChart, Header } from '../components/ui';
+import { colors } from '../theme/colors';
+import { spacing, borderRadius } from '../theme/spacing';
+import { DRINK_INFO, DrinkLog, DrinkType } from '../types';
+
+// 목업 데이터 - 최근 4주
+const MOCK_LOGS: DrinkLog[] = [
+  { id: '1', userId: 'u1', date: '2026-01-14', drinkType: 'beer', amount: 1, volumeMl: 500, createdAt: '' },
+  { id: '2', userId: 'u1', date: '2026-01-13', drinkType: 'soju', amount: 1.5, volumeMl: 540, createdAt: '' },
+  { id: '3', userId: 'u1', date: '2026-01-10', drinkType: 'soju', amount: 1, volumeMl: 360, createdAt: '' },
+  { id: '4', userId: 'u1', date: '2026-01-10', drinkType: 'beer', amount: 2, volumeMl: 1000, createdAt: '' },
+  { id: '5', userId: 'u1', date: '2026-01-08', drinkType: 'wine', amount: 0.5, volumeMl: 375, createdAt: '' },
+  { id: '6', userId: 'u1', date: '2026-01-05', drinkType: 'soju', amount: 2, volumeMl: 720, createdAt: '' },
+  { id: '7', userId: 'u1', date: '2026-01-03', drinkType: 'beer', amount: 1, volumeMl: 500, createdAt: '' },
+  { id: '8', userId: 'u1', date: '2025-12-28', drinkType: 'whiskey', amount: 0.3, volumeMl: 210, createdAt: '' },
+  { id: '9', userId: 'u1', date: '2025-12-25', drinkType: 'wine', amount: 1, volumeMl: 750, createdAt: '' },
+  { id: '10', userId: 'u1', date: '2025-12-20', drinkType: 'soju', amount: 1, volumeMl: 360, createdAt: '' },
+];
+
+type Period = 'week' | 'month';
+
+export function StatsScreen() {
+  const [period, setPeriod] = useState<Period>('week');
+
+  // 기간별 필터링된 로그
+  const filteredLogs = useMemo(() => {
+    const now = new Date();
+    const cutoff = new Date();
+    
+    if (period === 'week') {
+      cutoff.setDate(now.getDate() - 7);
+    } else {
+      cutoff.setDate(now.getDate() - 30);
+    }
+    
+    return MOCK_LOGS.filter((log) => new Date(log.date) >= cutoff);
+  }, [period]);
+
+  // 총 통계
+  const totalStats = useMemo(() => {
+    const totalMl = filteredLogs.reduce((sum, log) => sum + log.volumeMl, 0);
+    const drinkDays = new Set(filteredLogs.map((log) => log.date)).size;
+    const totalAlcohol = filteredLogs.reduce((sum, log) => {
+      const info = DRINK_INFO[log.drinkType];
+      return sum + (log.volumeMl * info.alcoholPercent / 100);
+    }, 0);
+
+    return { totalMl, drinkDays, totalAlcohol: Math.round(totalAlcohol) };
+  }, [filteredLogs]);
+
+  // 요일별 음주량 (주간)
+  const weeklyData = useMemo(() => {
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayTotals = days.map(() => 0);
+
+    filteredLogs.forEach((log) => {
+      const dayOfWeek = new Date(log.date).getDay();
+      dayTotals[dayOfWeek] += log.volumeMl;
+    });
+
+    return days.map((label, index) => ({
+      label,
+      value: dayTotals[index],
+      color: dayTotals[index] > 500 ? colors.accent.warning : colors.primary.main,
+    }));
+  }, [filteredLogs]);
+
+  // 주종별 비율
+  const drinkTypeStats = useMemo(() => {
+    const totals: Record<DrinkType, number> = {
+      soju: 0,
+      beer: 0,
+      wine: 0,
+      whiskey: 0,
+      makgeolli: 0,
+      etc: 0,
+    };
+
+    filteredLogs.forEach((log) => {
+      totals[log.drinkType] += log.volumeMl;
+    });
+
+    const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0) || 1;
+
+    return Object.entries(totals)
+      .filter(([_, ml]) => ml > 0)
+      .map(([type, ml]) => ({
+        type: type as DrinkType,
+        ml,
+        percent: Math.round((ml / grandTotal) * 100),
+      }))
+      .sort((a, b) => b.ml - a.ml);
+  }, [filteredLogs]);
+
+  return (
+    <LinearGradient
+      colors={[colors.background.primary, '#E8F4FC']}
+      style={styles.gradient}
+    >
+      <StatusBar barStyle="dark-content" />
+
+      {/* Sticky Header */}
+      <Header title="통계" emoji="📊" />
+
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Period Selector */}
+        <View style={styles.periodSelector}>
+          <TouchableOpacity
+            style={[
+              styles.periodButton,
+              period === 'week' && styles.periodButtonActive,
+            ]}
+            onPress={() => setPeriod('week')}
+          >
+            <Text
+              variant="body"
+              color={period === 'week' ? 'inverse' : 'secondary'}
+            >
+              이번 주
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.periodButton,
+              period === 'month' && styles.periodButtonActive,
+            ]}
+            onPress={() => setPeriod('month')}
+          >
+            <Text
+              variant="body"
+              color={period === 'month' ? 'inverse' : 'secondary'}
+            >
+              이번 달
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 요약 카드 */}
+        <Card style={styles.summaryCard}>
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryItem}>
+              <Text variant="caption" color="secondary">총 음주량</Text>
+              <Text variant="heading" color="primary">
+                {(totalStats.totalMl / 1000).toFixed(1)}L
+              </Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text variant="caption" color="secondary">음주일</Text>
+              <Text variant="heading" color="primary">
+                {totalStats.drinkDays}일
+              </Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text variant="caption" color="secondary">순 알코올</Text>
+              <Text variant="heading" color="primary">
+                {totalStats.totalAlcohol}ml
+              </Text>
+            </View>
+          </View>
+        </Card>
+
+        {/* 요일별 차트 */}
+        <Card style={styles.chartCard}>
+          <Text variant="title" color="primary" style={styles.cardTitle}>
+            요일별 음주량
+          </Text>
+          <BarChart data={weeklyData} height={120} />
+        </Card>
+
+        {/* 주종별 비율 */}
+        <Card style={styles.chartCard}>
+          <Text variant="title" color="primary" style={styles.cardTitle}>
+            주종별 비율
+          </Text>
+          <View style={styles.drinkTypeList}>
+            {drinkTypeStats.length === 0 ? (
+              <Text variant="body" color="secondary" center>
+                데이터가 없어요
+              </Text>
+            ) : (
+              drinkTypeStats.map((item) => (
+                <View key={item.type} style={styles.drinkTypeItem}>
+                  <View style={styles.drinkTypeLeft}>
+                    <Text style={styles.drinkTypeIcon}>
+                      {DRINK_INFO[item.type].icon}
+                    </Text>
+                    <Text variant="body" color="primary">
+                      {DRINK_INFO[item.type].label}
+                    </Text>
+                  </View>
+                  <View style={styles.drinkTypeRight}>
+                    <View style={styles.percentBarContainer}>
+                      <View
+                        style={[
+                          styles.percentBar,
+                          {
+                            width: `${item.percent}%`,
+                            backgroundColor: colors.drinks[item.type],
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text variant="caption" color="secondary" style={styles.percentText}>
+                      {item.percent}%
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        </Card>
+
+        {/* 팁 */}
+        <Card variant="glass" style={styles.tipCard}>
+          <Text variant="title" color="primary">💡 건강 팁</Text>
+          <Text variant="body" color="secondary" style={styles.tipText}>
+            {totalStats.drinkDays >= 4
+              ? '이번 주 음주일이 많아요. 간에게 휴식을 주세요!'
+              : totalStats.totalMl > 2000
+              ? '음주량이 많은 편이에요. 천천히 줄여보는 건 어떨까요?'
+              : '좋은 음주 습관을 유지하고 계시네요! 👍'}
+          </Text>
+        </Card>
+      </ScrollView>
+    </LinearGradient>
+  );
+}
+
+const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingTop: 100,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  periodSelector: {
+    flexDirection: 'row',
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.full,
+    padding: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  periodButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: borderRadius.full,
+  },
+  periodButtonActive: {
+    backgroundColor: colors.primary.main,
+  },
+  summaryCard: {
+    marginBottom: spacing.md,
+    padding: spacing.lg,
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  summaryItem: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  chartCard: {
+    marginBottom: spacing.md,
+    padding: spacing.lg,
+  },
+  cardTitle: {
+    marginBottom: spacing.sm,
+  },
+  drinkTypeList: {
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  drinkTypeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  drinkTypeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  drinkTypeIcon: {
+    fontSize: 24,
+  },
+  drinkTypeRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: spacing.lg,
+  },
+  percentBarContainer: {
+    flex: 1,
+    height: 8,
+    backgroundColor: colors.border.light,
+    borderRadius: borderRadius.full,
+    marginRight: spacing.sm,
+    overflow: 'hidden',
+  },
+  percentBar: {
+    height: '100%',
+    borderRadius: borderRadius.full,
+  },
+  percentText: {
+    width: 36,
+    textAlign: 'right',
+  },
+  tipCard: {
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  tipText: {
+    lineHeight: 22,
+  },
+});
