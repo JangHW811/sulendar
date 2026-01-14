@@ -1,8 +1,4 @@
-/**
- * 술렌다 - 목표 설정 화면
- */
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,36 +6,162 @@ import {
   Switch,
   TouchableOpacity,
   StatusBar,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Card, Button, AmountSelector, Header } from '../components/ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
+import { useAuth } from '../context';
+import { goalsService, drinkLogsService } from '../services';
+import type { Goal } from '../types';
 
 interface GoalState {
   weeklyLimit: {
     enabled: boolean;
     bottles: number;
+    goalId: string | null;
   };
   soberChallenge: {
     enabled: boolean;
     days: number;
     startDate: string | null;
+    goalId: string | null;
   };
 }
 
 export function GoalsScreen() {
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [weeklyUsed, setWeeklyUsed] = useState(0);
   const [goals, setGoals] = useState<GoalState>({
     weeklyLimit: {
-      enabled: true,
+      enabled: false,
       bottles: 5,
+      goalId: null,
     },
     soberChallenge: {
       enabled: false,
       days: 7,
       startDate: null,
+      goalId: null,
     },
   });
+
+  const loadGoals = useCallback(async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      const activeGoals = await goalsService.getActive(user.id);
+      
+      const weeklyGoal = activeGoals.find((g) => g.type === 'weekly_limit');
+      const soberGoal = activeGoals.find((g) => g.type === 'sober_challenge');
+
+      setGoals({
+        weeklyLimit: {
+          enabled: !!weeklyGoal,
+          bottles: weeklyGoal?.targetValue || 5,
+          goalId: weeklyGoal?.id || null,
+        },
+        soberChallenge: {
+          enabled: !!soberGoal,
+          days: soberGoal?.targetValue || 7,
+          startDate: soberGoal?.startDate || null,
+          goalId: soberGoal?.id || null,
+        },
+      });
+
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      const weekLogs = await drinkLogsService.getByDateRange(
+        user.id,
+        startOfWeek.toISOString().split('T')[0],
+        now.toISOString().split('T')[0]
+      );
+      const totalBottles = weekLogs.reduce((sum, log) => sum + log.amount, 0);
+      setWeeklyUsed(totalBottles);
+    } catch (error) {
+      console.error('Failed to load goals:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadGoals();
+  }, [loadGoals]);
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+    try {
+      if (goals.weeklyLimit.enabled) {
+        if (goals.weeklyLimit.goalId) {
+          await goalsService.update(goals.weeklyLimit.goalId, {
+            targetValue: goals.weeklyLimit.bottles,
+          });
+        } else {
+          const newGoal = await goalsService.create({
+            userId: user.id,
+            type: 'weekly_limit',
+            targetValue: goals.weeklyLimit.bottles,
+            startDate: new Date().toISOString().split('T')[0],
+          });
+          setGoals((prev) => ({
+            ...prev,
+            weeklyLimit: { ...prev.weeklyLimit, goalId: newGoal.id },
+          }));
+        }
+      } else if (goals.weeklyLimit.goalId) {
+        await goalsService.deactivate(goals.weeklyLimit.goalId);
+        setGoals((prev) => ({
+          ...prev,
+          weeklyLimit: { ...prev.weeklyLimit, goalId: null },
+        }));
+      }
+
+      if (goals.soberChallenge.enabled) {
+        if (goals.soberChallenge.goalId) {
+          await goalsService.update(goals.soberChallenge.goalId, {
+            targetValue: goals.soberChallenge.days,
+          });
+        } else {
+          const startDate = new Date().toISOString().split('T')[0];
+          const newGoal = await goalsService.create({
+            userId: user.id,
+            type: 'sober_challenge',
+            targetValue: goals.soberChallenge.days,
+            startDate,
+          });
+          setGoals((prev) => ({
+            ...prev,
+            soberChallenge: {
+              ...prev.soberChallenge,
+              goalId: newGoal.id,
+              startDate,
+            },
+          }));
+        }
+      } else if (goals.soberChallenge.goalId) {
+        await goalsService.deactivate(goals.soberChallenge.goalId);
+        setGoals((prev) => ({
+          ...prev,
+          soberChallenge: { ...prev.soberChallenge, goalId: null, startDate: null },
+        }));
+      }
+
+      Alert.alert('저장 완료', '목표가 저장되었습니다.');
+    } catch (error: any) {
+      Alert.alert('저장 실패', error.message || '다시 시도해주세요');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const toggleWeeklyLimit = () => {
     setGoals((prev) => ({
@@ -54,12 +176,13 @@ export function GoalsScreen() {
       soberChallenge: {
         ...prev.soberChallenge,
         enabled: !prev.soberChallenge.enabled,
-        startDate: !prev.soberChallenge.enabled ? new Date().toISOString().split('T')[0] : null,
+        startDate: !prev.soberChallenge.enabled
+          ? new Date().toISOString().split('T')[0]
+          : prev.soberChallenge.startDate,
       },
     }));
   };
 
-  // 금주 챌린지 D-Day 계산
   const getSoberDays = () => {
     if (!goals.soberChallenge.startDate) return 0;
     const start = new Date(goals.soberChallenge.startDate);
@@ -69,6 +192,18 @@ export function GoalsScreen() {
 
   const soberDays = getSoberDays();
   const soberProgress = Math.min(100, (soberDays / goals.soberChallenge.days) * 100);
+  const weeklyProgress = Math.min(100, (weeklyUsed / goals.weeklyLimit.bottles) * 100);
+
+  if (isLoading) {
+    return (
+      <LinearGradient
+        colors={[colors.background.primary, '#E8F4FC']}
+        style={[styles.gradient, styles.loadingContainer]}
+      >
+        <ActivityIndicator size="large" color={colors.primary.main} />
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -77,7 +212,6 @@ export function GoalsScreen() {
     >
       <StatusBar barStyle="dark-content" />
 
-      {/* Sticky Header */}
       <Header
         title="목표"
         emoji="🎯"
@@ -89,7 +223,6 @@ export function GoalsScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* 주간 음주 제한 */}
         <Card style={styles.goalCard}>
           <View style={styles.goalHeader}>
             <View style={styles.goalTitleRow}>
@@ -133,19 +266,18 @@ export function GoalsScreen() {
                   <View
                     style={[
                       styles.progressFill,
-                      { width: '40%' }, // 예시: 현재 2병/5병
+                      { width: `${weeklyProgress}%` },
                     ]}
                   />
                 </View>
                 <Text variant="caption" color="secondary">
-                  이번 주: 2병 / {goals.weeklyLimit.bottles}병
+                  이번 주: {weeklyUsed}병 / {goals.weeklyLimit.bottles}병
                 </Text>
               </View>
             </View>
           )}
         </Card>
 
-        {/* 금주 챌린지 */}
         <Card style={styles.goalCard}>
           <View style={styles.goalHeader}>
             <View style={styles.goalTitleRow}>
@@ -169,13 +301,12 @@ export function GoalsScreen() {
             <View style={styles.goalContent}>
               <View style={styles.divider} />
               
-              {/* 진행 상황 */}
               <View style={styles.challengeStatus}>
                 <View style={styles.dDayBadge}>
                   <Text variant="small" color="inverse">D+{soberDays}</Text>
                 </View>
                 <Text variant="heading" color="primary">
-                  {soberDays}일째 금주 중! 🔥
+                  {soberDays}일째 금주 중!
                 </Text>
               </View>
 
@@ -194,7 +325,6 @@ export function GoalsScreen() {
                 </Text>
               </View>
 
-              {/* 목표일 수정 */}
               <View style={styles.targetDaysRow}>
                 <Text variant="body" color="secondary">목표 일수</Text>
                 <View style={styles.targetDaysButtons}>
@@ -226,17 +356,22 @@ export function GoalsScreen() {
           )}
         </Card>
 
-        {/* 동기부여 카드 */}
         <Card variant="glass" style={styles.motivationCard}>
-          <Text variant="title" color="primary">💪 오늘의 동기부여</Text>
+          <Text variant="title" color="primary">오늘의 동기부여</Text>
           <Text variant="body" color="secondary" style={styles.motivationText}>
             "작은 변화가 큰 차이를 만듭니다. 오늘 하루도 건강한 선택을 응원해요!"
           </Text>
         </Card>
 
-        {/* 저장 버튼 */}
-        <Button variant="primary" size="lg" fullWidth style={styles.saveButton}>
-          목표 저장하기
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          style={styles.saveButton}
+          onPress={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? '저장 중...' : '목표 저장하기'}
         </Button>
       </ScrollView>
     </LinearGradient>
@@ -246,6 +381,10 @@ export function GoalsScreen() {
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flex: 1,

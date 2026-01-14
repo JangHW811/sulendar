@@ -1,7 +1,3 @@
-/**
- * 술렌다 - 인증 네비게이터
- */
-
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LoginScreen, RegisterScreen } from '../screens';
@@ -9,11 +5,7 @@ import { AuthStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
-interface Props {
-  onLogin: () => void;
-}
-
-export function AuthNavigator({ onLogin }: Props) {
+export function AuthNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -24,7 +16,6 @@ export function AuthNavigator({ onLogin }: Props) {
         {(props) => (
           <LoginScreen
             {...props}
-            onLogin={onLogin}
             onNavigateToRegister={() => props.navigation.navigate('Register')}
           />
         )}
@@ -33,7 +24,6 @@ export function AuthNavigator({ onLogin }: Props) {
         {(props) => (
           <RegisterScreen
             {...props}
-            onRegister={onLogin}
             onNavigateToLogin={() => props.navigation.navigate('Login')}
           />
         )}

@@ -1,72 +1,75 @@
-/**
- * 술렌다 - 통계 대시보드 화면
- */
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Card, BarChart, Header } from '../components/ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
 import { DRINK_INFO, DrinkLog, DrinkType } from '../types';
-
-// 목업 데이터 - 최근 4주
-const MOCK_LOGS: DrinkLog[] = [
-  { id: '1', userId: 'u1', date: '2026-01-14', drinkType: 'beer', amount: 1, volumeMl: 500, createdAt: '' },
-  { id: '2', userId: 'u1', date: '2026-01-13', drinkType: 'soju', amount: 1.5, volumeMl: 540, createdAt: '' },
-  { id: '3', userId: 'u1', date: '2026-01-10', drinkType: 'soju', amount: 1, volumeMl: 360, createdAt: '' },
-  { id: '4', userId: 'u1', date: '2026-01-10', drinkType: 'beer', amount: 2, volumeMl: 1000, createdAt: '' },
-  { id: '5', userId: 'u1', date: '2026-01-08', drinkType: 'wine', amount: 0.5, volumeMl: 375, createdAt: '' },
-  { id: '6', userId: 'u1', date: '2026-01-05', drinkType: 'soju', amount: 2, volumeMl: 720, createdAt: '' },
-  { id: '7', userId: 'u1', date: '2026-01-03', drinkType: 'beer', amount: 1, volumeMl: 500, createdAt: '' },
-  { id: '8', userId: 'u1', date: '2025-12-28', drinkType: 'whiskey', amount: 0.3, volumeMl: 210, createdAt: '' },
-  { id: '9', userId: 'u1', date: '2025-12-25', drinkType: 'wine', amount: 1, volumeMl: 750, createdAt: '' },
-  { id: '10', userId: 'u1', date: '2025-12-20', drinkType: 'soju', amount: 1, volumeMl: 360, createdAt: '' },
-];
+import { useAuth } from '../context';
+import { drinkLogsService } from '../services';
 
 type Period = 'week' | 'month';
 
 export function StatsScreen() {
+  const { user } = useAuth();
   const [period, setPeriod] = useState<Period>('week');
+  const [logs, setLogs] = useState<DrinkLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 기간별 필터링된 로그
-  const filteredLogs = useMemo(() => {
-    const now = new Date();
-    const cutoff = new Date();
-    
-    if (period === 'week') {
-      cutoff.setDate(now.getDate() - 7);
-    } else {
-      cutoff.setDate(now.getDate() - 30);
+  const loadLogs = useCallback(async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      const now = new Date();
+      const startDate = new Date();
+      
+      if (period === 'week') {
+        startDate.setDate(now.getDate() - 7);
+      } else {
+        startDate.setDate(now.getDate() - 30);
+      }
+
+      const data = await drinkLogsService.getByDateRange(
+        user.id,
+        startDate.toISOString().split('T')[0],
+        now.toISOString().split('T')[0]
+      );
+      setLogs(data);
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    return MOCK_LOGS.filter((log) => new Date(log.date) >= cutoff);
-  }, [period]);
+  }, [user, period]);
 
-  // 총 통계
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
+
   const totalStats = useMemo(() => {
-    const totalMl = filteredLogs.reduce((sum, log) => sum + log.volumeMl, 0);
-    const drinkDays = new Set(filteredLogs.map((log) => log.date)).size;
-    const totalAlcohol = filteredLogs.reduce((sum, log) => {
+    const totalMl = logs.reduce((sum, log) => sum + log.volumeMl, 0);
+    const drinkDays = new Set(logs.map((log) => log.date)).size;
+    const totalAlcohol = logs.reduce((sum, log) => {
       const info = DRINK_INFO[log.drinkType];
       return sum + (log.volumeMl * info.alcoholPercent / 100);
     }, 0);
 
     return { totalMl, drinkDays, totalAlcohol: Math.round(totalAlcohol) };
-  }, [filteredLogs]);
+  }, [logs]);
 
-  // 요일별 음주량 (주간)
   const weeklyData = useMemo(() => {
     const days = ['일', '월', '화', '수', '목', '금', '토'];
     const dayTotals = days.map(() => 0);
 
-    filteredLogs.forEach((log) => {
+    logs.forEach((log) => {
       const dayOfWeek = new Date(log.date).getDay();
       dayTotals[dayOfWeek] += log.volumeMl;
     });
@@ -76,9 +79,8 @@ export function StatsScreen() {
       value: dayTotals[index],
       color: dayTotals[index] > 500 ? colors.accent.warning : colors.primary.main,
     }));
-  }, [filteredLogs]);
+  }, [logs]);
 
-  // 주종별 비율
   const drinkTypeStats = useMemo(() => {
     const totals: Record<DrinkType, number> = {
       soju: 0,
@@ -89,7 +91,7 @@ export function StatsScreen() {
       etc: 0,
     };
 
-    filteredLogs.forEach((log) => {
+    logs.forEach((log) => {
       totals[log.drinkType] += log.volumeMl;
     });
 
@@ -103,7 +105,18 @@ export function StatsScreen() {
         percent: Math.round((ml / grandTotal) * 100),
       }))
       .sort((a, b) => b.ml - a.ml);
-  }, [filteredLogs]);
+  }, [logs]);
+
+  if (isLoading) {
+    return (
+      <LinearGradient
+        colors={[colors.background.primary, '#E8F4FC']}
+        style={[styles.gradient, styles.loadingContainer]}
+      >
+        <ActivityIndicator size="large" color={colors.primary.main} />
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -112,7 +125,6 @@ export function StatsScreen() {
     >
       <StatusBar barStyle="dark-content" />
 
-      {/* Sticky Header */}
       <Header title="통계" emoji="📊" />
 
       <ScrollView
@@ -120,7 +132,6 @@ export function StatsScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Period Selector */}
         <View style={styles.periodSelector}>
           <TouchableOpacity
             style={[
@@ -152,7 +163,6 @@ export function StatsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 요약 카드 */}
         <Card style={styles.summaryCard}>
           <View style={styles.summaryGrid}>
             <View style={styles.summaryItem}>
@@ -176,7 +186,6 @@ export function StatsScreen() {
           </View>
         </Card>
 
-        {/* 요일별 차트 */}
         <Card style={styles.chartCard}>
           <Text variant="title" color="primary" style={styles.cardTitle}>
             요일별 음주량
@@ -184,7 +193,6 @@ export function StatsScreen() {
           <BarChart data={weeklyData} height={120} />
         </Card>
 
-        {/* 주종별 비율 */}
         <Card style={styles.chartCard}>
           <Text variant="title" color="primary" style={styles.cardTitle}>
             주종별 비율
@@ -227,15 +235,14 @@ export function StatsScreen() {
           </View>
         </Card>
 
-        {/* 팁 */}
         <Card variant="glass" style={styles.tipCard}>
-          <Text variant="title" color="primary">💡 건강 팁</Text>
+          <Text variant="title" color="primary">건강 팁</Text>
           <Text variant="body" color="secondary" style={styles.tipText}>
             {totalStats.drinkDays >= 4
               ? '이번 주 음주일이 많아요. 간에게 휴식을 주세요!'
               : totalStats.totalMl > 2000
               ? '음주량이 많은 편이에요. 천천히 줄여보는 건 어떨까요?'
-              : '좋은 음주 습관을 유지하고 계시네요! 👍'}
+              : '좋은 음주 습관을 유지하고 계시네요!'}
           </Text>
         </Card>
       </ScrollView>
@@ -246,6 +253,10 @@ export function StatsScreen() {
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flex: 1,

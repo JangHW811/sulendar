@@ -1,16 +1,12 @@
-/**
- * 술렌다 - 음주 기록 추가 화면
- * 프로토타입 페이지
- */
-
 import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   StatusBar,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Text,
@@ -23,6 +19,8 @@ import {
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import type { DrinkType } from '../components/ui';
+import { useAuth } from '../context';
+import { drinkLogsService } from '../services';
 
 type Step = 'select-drink' | 'select-amount';
 
@@ -41,20 +39,42 @@ const drinkOptions: DrinkOption[] = [
   { type: 'etc', label: '기타', icon: '🍸' },
 ];
 
-export function AddDrinkScreen() {
+interface Props {
+  onClose?: () => void;
+  selectedDate?: string;
+}
+
+export function AddDrinkScreen({ onClose, selectedDate }: Props) {
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>('select-drink');
   const [selectedDrink, setSelectedDrink] = useState<DrinkType | null>(null);
   const [amount, setAmount] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
 
   const currentStep = step === 'select-drink' ? 1 : 2;
   const totalSteps = 2;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 'select-drink' && selectedDrink) {
       setStep('select-amount');
-    } else if (step === 'select-amount') {
-      // TODO: 저장 로직
-      console.log('저장:', { drink: selectedDrink, amount });
+    } else if (step === 'select-amount' && selectedDrink && user) {
+      setIsLoading(true);
+      try {
+        const date = selectedDate || new Date().toISOString().split('T')[0];
+        await drinkLogsService.create({
+          userId: user.id,
+          date,
+          drinkType: selectedDrink,
+          amount,
+        });
+        Alert.alert('저장 완료', '음주 기록이 저장되었습니다.', [
+          { text: '확인', onPress: onClose },
+        ]);
+      } catch (error: any) {
+        Alert.alert('저장 실패', error.message || '다시 시도해주세요');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -76,12 +96,10 @@ export function AddDrinkScreen() {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" />
 
-        {/* Header */}
         <View style={styles.header}>
           <ProgressBar current={currentStep} total={totalSteps} />
         </View>
 
-        {/* Content */}
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
@@ -89,7 +107,6 @@ export function AddDrinkScreen() {
         >
           {step === 'select-drink' ? (
             <>
-              {/* Question */}
               <View style={styles.questionContainer}>
                 <Text variant="display" color="primary" center>
                   오늘 뭐 마셨어요?
@@ -99,7 +116,6 @@ export function AddDrinkScreen() {
                 </Text>
               </View>
 
-              {/* Drink Grid */}
               <View style={styles.grid}>
                 {drinkOptions.map((drink) => (
                   <View key={drink.type} style={styles.gridItem}>
@@ -116,7 +132,6 @@ export function AddDrinkScreen() {
             </>
           ) : (
             <>
-              {/* Question */}
               <View style={styles.questionContainer}>
                 <Text variant="display" color="primary" center>
                   얼마나 마셨어요?
@@ -126,7 +141,6 @@ export function AddDrinkScreen() {
                 </Text>
               </View>
 
-              {/* Amount Card */}
               <Card variant="glass" padding="lg" style={styles.amountCard}>
                 <View style={styles.selectedDrinkPreview}>
                   <Text style={styles.bigEmoji}>
@@ -150,7 +164,6 @@ export function AddDrinkScreen() {
           )}
         </ScrollView>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <View style={styles.buttonRow}>
             {step === 'select-amount' && (
@@ -163,10 +176,10 @@ export function AddDrinkScreen() {
               size="lg"
               fullWidth={step === 'select-drink'}
               onPress={handleNext}
-              disabled={step === 'select-drink' && !selectedDrink}
+              disabled={(step === 'select-drink' && !selectedDrink) || isLoading}
               style={step === 'select-amount' ? styles.flexButton : undefined}
             >
-              {step === 'select-drink' ? '다음' : '저장하기'}
+              {isLoading ? '저장 중...' : step === 'select-drink' ? '다음' : '저장하기'}
             </Button>
           </View>
         </View>

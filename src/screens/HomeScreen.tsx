@@ -1,63 +1,76 @@
-/**
- * 술렌다 - 홈 화면 (캘린더 뷰)
- */
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Card, Calendar, Header } from '../components/ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
 import { DRINK_INFO, DrinkLog } from '../types';
-
-// 목업 데이터
-const MOCK_LOGS: DrinkLog[] = [
-  { id: '1', userId: 'u1', date: '2026-01-10', drinkType: 'soju', amount: 1, volumeMl: 360, createdAt: '' },
-  { id: '2', userId: 'u1', date: '2026-01-10', drinkType: 'beer', amount: 2, volumeMl: 1000, createdAt: '' },
-  { id: '3', userId: 'u1', date: '2026-01-08', drinkType: 'wine', amount: 0.5, volumeMl: 375, createdAt: '' },
-  { id: '4', userId: 'u1', date: '2026-01-05', drinkType: 'soju', amount: 2, volumeMl: 720, createdAt: '' },
-  { id: '5', userId: 'u1', date: '2026-01-14', drinkType: 'beer', amount: 1, volumeMl: 500, createdAt: '' },
-];
+import { useAuth } from '../context';
+import { drinkLogsService } from '../services';
 
 interface Props {
   onAddDrink?: () => void;
 }
 
 export function HomeScreen({ onAddDrink }: Props) {
+  const { user } = useAuth();
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(today);
+  const [logs, setLogs] = useState<DrinkLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 선택된 날짜의 기록
+  const loadMonthLogs = useCallback(async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      const now = new Date();
+      const monthLogs = await drinkLogsService.getByMonth(
+        user.id,
+        now.getFullYear(),
+        now.getMonth() + 1
+      );
+      setLogs(monthLogs);
+    } catch (error) {
+      console.error('Failed to load logs:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadMonthLogs();
+  }, [loadMonthLogs]);
+
   const selectedLogs = useMemo(() => {
-    return MOCK_LOGS.filter((log) => log.date === selectedDate);
-  }, [selectedDate]);
+    return logs.filter((log) => log.date === selectedDate);
+  }, [logs, selectedDate]);
 
-  // 마킹된 날짜들
   const markedDates = useMemo(() => {
     const marks: Record<string, { marked: boolean; color: string }> = {};
-    MOCK_LOGS.forEach((log) => {
+    logs.forEach((log) => {
       marks[log.date] = {
         marked: true,
         color: colors.drinks[log.drinkType],
       };
     });
     return marks;
-  }, []);
+  }, [logs]);
 
-  // 이번 주 통계
   const weekStats = useMemo(() => {
     const now = new Date();
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
-    const weekLogs = MOCK_LOGS.filter((log) => {
+    const weekLogs = logs.filter((log) => {
       const logDate = new Date(log.date);
       return logDate >= startOfWeek;
     });
@@ -66,7 +79,27 @@ export function HomeScreen({ onAddDrink }: Props) {
     const drinkDays = new Set(weekLogs.map((log) => log.date)).size;
 
     return { totalMl, drinkDays, totalLogs: weekLogs.length };
-  }, []);
+  }, [logs]);
+
+  const handleDeleteLog = async (logId: string) => {
+    try {
+      await drinkLogsService.delete(logId);
+      setLogs((prev) => prev.filter((log) => log.id !== logId));
+    } catch (error) {
+      console.error('Failed to delete log:', error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <LinearGradient
+        colors={[colors.background.primary, '#E8F4FC']}
+        style={[styles.gradient, styles.loadingContainer]}
+      >
+        <ActivityIndicator size="large" color={colors.primary.main} />
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -75,7 +108,6 @@ export function HomeScreen({ onAddDrink }: Props) {
     >
       <StatusBar barStyle="dark-content" />
 
-      {/* Sticky Header */}
       <Header
         title="술렌다"
         emoji="🍺"
@@ -87,7 +119,6 @@ export function HomeScreen({ onAddDrink }: Props) {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* 이번 주 요약 */}
         <Card style={styles.summaryCard}>
           <Text variant="title" color="primary" style={styles.summaryTitle}>
             이번 주 요약
@@ -122,14 +153,12 @@ export function HomeScreen({ onAddDrink }: Props) {
           </View>
         </Card>
 
-        {/* 캘린더 */}
         <Calendar
           selectedDate={selectedDate}
           markedDates={markedDates}
           onSelectDate={setSelectedDate}
         />
 
-        {/* 선택된 날짜 기록 */}
         <View style={styles.logsSection}>
           <View style={styles.logsSectionHeader}>
             <Text variant="title" color="primary">
@@ -147,7 +176,7 @@ export function HomeScreen({ onAddDrink }: Props) {
           {selectedLogs.length === 0 ? (
             <Card variant="glass" style={styles.emptyCard}>
               <Text variant="body" color="secondary" center>
-                기록이 없어요 ✨
+                기록이 없어요
               </Text>
               <Text variant="caption" color="muted" center>
                 {selectedDate === today
@@ -157,28 +186,34 @@ export function HomeScreen({ onAddDrink }: Props) {
             </Card>
           ) : (
             selectedLogs.map((log) => (
-              <Card key={log.id} style={styles.logCard}>
-                <View style={styles.logRow}>
-                  <View
-                    style={[
-                      styles.logIcon,
-                      { backgroundColor: `${colors.drinks[log.drinkType]}20` },
-                    ]}
-                  >
-                    <Text style={styles.logEmoji}>
-                      {DRINK_INFO[log.drinkType].icon}
-                    </Text>
+              <TouchableOpacity
+                key={log.id}
+                onLongPress={() => handleDeleteLog(log.id)}
+                activeOpacity={0.8}
+              >
+                <Card style={styles.logCard}>
+                  <View style={styles.logRow}>
+                    <View
+                      style={[
+                        styles.logIcon,
+                        { backgroundColor: `${colors.drinks[log.drinkType]}20` },
+                      ]}
+                    >
+                      <Text style={styles.logEmoji}>
+                        {DRINK_INFO[log.drinkType].icon}
+                      </Text>
+                    </View>
+                    <View style={styles.logInfo}>
+                      <Text variant="title" color="primary">
+                        {DRINK_INFO[log.drinkType].label}
+                      </Text>
+                      <Text variant="caption" color="secondary">
+                        {log.amount}병 ({log.volumeMl}ml)
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.logInfo}>
-                    <Text variant="title" color="primary">
-                      {DRINK_INFO[log.drinkType].label}
-                    </Text>
-                    <Text variant="caption" color="secondary">
-                      {log.amount}병 ({log.volumeMl}ml)
-                    </Text>
-                  </View>
-                </View>
-              </Card>
+                </Card>
+              </TouchableOpacity>
             ))
           )}
         </View>
@@ -191,11 +226,15 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   content: {
     flex: 1,
   },
   contentContainer: {
-    paddingTop: 120, // Header 높이만큼 여백
+    paddingTop: 120,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl,
   },

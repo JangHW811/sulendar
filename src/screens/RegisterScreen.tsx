@@ -1,29 +1,27 @@
-/**
- * 술렌다 - 회원가입 화면
- */
-
 import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Button, Input, Card } from '../components/ui';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
+import { useAuth } from '../context';
 
 interface Props {
-  onRegister?: () => void;
   onNavigateToLogin?: () => void;
 }
 
-export function RegisterScreen({ onRegister, onNavigateToLogin }: Props) {
+export function RegisterScreen({ onNavigateToLogin }: Props) {
+  const { signUp } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -71,11 +69,21 @@ export function RegisterScreen({ onRegister, onNavigateToLogin }: Props) {
     if (!validate()) return;
 
     setIsLoading(true);
-    // TODO: Supabase Auth 연동
-    setTimeout(() => {
+    try {
+      await signUp(formData.email, formData.password, formData.name);
+      Alert.alert(
+        '회원가입 완료',
+        '이메일 인증 후 로그인해주세요.',
+        [{ text: '확인', onPress: onNavigateToLogin }]
+      );
+    } catch (error: any) {
+      Alert.alert(
+        '회원가입 실패',
+        error.message || '다시 시도해주세요'
+      );
+    } finally {
       setIsLoading(false);
-      onRegister?.();
-    }, 1000);
+    }
   };
 
   return (
@@ -95,7 +103,6 @@ export function RegisterScreen({ onRegister, onNavigateToLogin }: Props) {
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
           >
-            {/* Header */}
             <View style={styles.header}>
               <TouchableOpacity onPress={onNavigateToLogin} style={styles.backButton}>
                 <Text variant="title" color="primary">← 뒤로</Text>
@@ -108,7 +115,6 @@ export function RegisterScreen({ onRegister, onNavigateToLogin }: Props) {
               </Text>
             </View>
 
-            {/* Form */}
             <Card style={styles.formCard}>
               <Input
                 label="이름"
@@ -158,7 +164,6 @@ export function RegisterScreen({ onRegister, onNavigateToLogin }: Props) {
               </Button>
             </Card>
 
-            {/* Login Link */}
             <View style={styles.footer}>
               <Text variant="body" color="secondary">
                 이미 계정이 있으신가요?{' '}

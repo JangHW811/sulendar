@@ -1,7 +1,3 @@
-/**
- * 술렌다 - 메인 탭 네비게이터
- */
-
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -21,7 +17,6 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 interface Props {
   onAddDrink: () => void;
-  onLogout: () => void;
 }
 
 interface TabIconProps {
@@ -47,7 +42,7 @@ function TabIcon({ icon, label, focused }: TabIconProps) {
   );
 }
 
-export function MainTabNavigator({ onAddDrink, onLogout }: Props) {
+export function MainTabNavigator({ onAddDrink }: Props) {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -99,14 +94,13 @@ export function MainTabNavigator({ onAddDrink, onLogout }: Props) {
 
       <Tab.Screen
         name="Profile"
+        component={ProfileScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="👤" label="프로필" focused={focused} />
           ),
         }}
-      >
-        {() => <ProfileScreen onLogout={onLogout} />}
-      </Tab.Screen>
+      />
     </Tab.Navigator>
   );
 }

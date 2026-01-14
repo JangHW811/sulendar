@@ -1,32 +1,32 @@
-/**
- * 술렌다 - 로그인 화면
- */
-
 import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Button, Input, Card } from '../components/ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
+import { useAuth } from '../context';
 
 interface Props {
-  onLogin?: () => void;
   onNavigateToRegister?: () => void;
 }
 
-export function LoginScreen({ onLogin, onNavigateToRegister }: Props) {
+export function LoginScreen({ onNavigateToRegister }: Props) {
+  const { signIn, signInWithOAuth } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
   const validate = () => {
     const newErrors: typeof errors = {};
@@ -51,11 +51,29 @@ export function LoginScreen({ onLogin, onNavigateToRegister }: Props) {
     if (!validate()) return;
 
     setIsLoading(true);
-    // TODO: Supabase Auth 연동
-    setTimeout(() => {
+    try {
+      await signIn(email, password);
+    } catch (error: any) {
+      Alert.alert(
+        '로그인 실패',
+        error.message || '이메일 또는 비밀번호를 확인해주세요'
+      );
+    } finally {
       setIsLoading(false);
-      onLogin?.();
-    }, 1000);
+    }
+  };
+
+  const handleOAuthLogin = async (provider: 'kakao' | 'google' | 'apple') => {
+    setOauthLoading(provider);
+    try {
+      await signInWithOAuth(provider);
+    } catch (error: any) {
+      if (!error.message?.includes('취소')) {
+        Alert.alert('로그인 실패', error.message || '다시 시도해주세요');
+      }
+    } finally {
+      setOauthLoading(null);
+    }
   };
 
   return (
@@ -70,7 +88,6 @@ export function LoginScreen({ onLogin, onNavigateToRegister }: Props) {
           style={styles.content}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {/* Logo & Title */}
           <View style={styles.header}>
             <Text style={styles.logo}>🍺</Text>
             <Text variant="display" color="primary" center>
@@ -81,7 +98,6 @@ export function LoginScreen({ onLogin, onNavigateToRegister }: Props) {
             </Text>
           </View>
 
-          {/* Login Form */}
           <Card style={styles.formCard}>
             <Input
               label="이메일"
@@ -113,7 +129,6 @@ export function LoginScreen({ onLogin, onNavigateToRegister }: Props) {
               {isLoading ? '로그인 중...' : '로그인'}
             </Button>
 
-            {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text variant="caption" color="muted" style={styles.dividerText}>
@@ -122,21 +137,39 @@ export function LoginScreen({ onLogin, onNavigateToRegister }: Props) {
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Social Login */}
             <View style={styles.socialButtons}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Text style={styles.socialIcon}>G</Text>
-                <Text variant="body" color="primary">Google로 시작</Text>
+              <TouchableOpacity
+                style={[styles.socialButton, styles.kakaoButton]}
+                onPress={() => handleOAuthLogin('kakao')}
+                disabled={!!oauthLoading}
+              >
+                {oauthLoading === 'kakao' ? (
+                  <ActivityIndicator size="small" color="#000" />
+                ) : (
+                  <>
+                    <Text style={styles.socialIcon}>💬</Text>
+                    <Text variant="body" color="primary">카카오로 시작</Text>
+                  </>
+                )}
               </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.socialButton, styles.kakaoButton]}>
-                <Text style={styles.socialIcon}>💬</Text>
-                <Text variant="body" color="primary">카카오로 시작</Text>
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={() => handleOAuthLogin('google')}
+                disabled={!!oauthLoading}
+              >
+                {oauthLoading === 'google' ? (
+                  <ActivityIndicator size="small" color={colors.primary.main} />
+                ) : (
+                  <>
+                    <Text style={styles.socialIcon}>G</Text>
+                    <Text variant="body" color="primary">Google로 시작</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </Card>
 
-          {/* Register Link */}
           <View style={styles.footer}>
             <Text variant="body" color="secondary">
               계정이 없으신가요?{' '}
@@ -206,6 +239,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border.default,
     backgroundColor: colors.background.secondary,
+    minHeight: 48,
   },
   kakaoButton: {
     backgroundColor: '#FEE500',
