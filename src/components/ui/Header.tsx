@@ -46,11 +46,10 @@ export function Header({ title, subtitle, emoji, rightElement }: HeaderProps) {
       left: 0,
       right: 0,
       zIndex: 100,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(255, 255, 255, 0.2)',
-      backgroundColor: 'rgba(240, 248, 255, 0.4)',
-      backdropFilter: 'blur(40px) saturate(180%)',
-      WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+      borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+      backdropFilter: 'blur(12px) saturate(120%)',
+      WebkitBackdropFilter: 'blur(12px) saturate(120%)',
     };
 
     return (
