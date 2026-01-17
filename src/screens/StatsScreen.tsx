@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,48 +11,26 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Card, BarChart, Header } from '../components/ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
-import { DRINK_INFO, DrinkLog, DrinkType } from '../types';
-import { useAuth } from '../context';
-import { drinkLogsService } from '../services';
+import { DRINK_INFO, DrinkType } from '../types';
+import { useDrinkLogsByDateRange } from '../hooks';
 
 type Period = 'week' | 'month';
 
 export function StatsScreen() {
-  const { user } = useAuth();
   const [period, setPeriod] = useState<Period>('week');
-  const [logs, setLogs] = useState<DrinkLog[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const loadLogs = useCallback(async () => {
-    if (!user) return;
+  const now = new Date();
+  const startDate = new Date();
+  if (period === 'week') {
+    startDate.setDate(now.getDate() - 7);
+  } else {
+    startDate.setDate(now.getDate() - 30);
+  }
 
-    setIsLoading(true);
-    try {
-      const now = new Date();
-      const startDate = new Date();
-      
-      if (period === 'week') {
-        startDate.setDate(now.getDate() - 7);
-      } else {
-        startDate.setDate(now.getDate() - 30);
-      }
-
-      const data = await drinkLogsService.getByDateRange(
-        user.id,
-        startDate.toISOString().split('T')[0],
-        now.toISOString().split('T')[0]
-      );
-      setLogs(data);
-    } catch (error) {
-      console.error('Failed to load stats:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, period]);
-
-  useEffect(() => {
-    loadLogs();
-  }, [loadLogs]);
+  const { data: logs = [], isLoading } = useDrinkLogsByDateRange(
+    startDate.toISOString().split('T')[0],
+    now.toISOString().split('T')[0]
+  );
 
   const totalStats = useMemo(() => {
     const totalMl = logs.reduce((sum, log) => sum + log.volumeMl, 0);

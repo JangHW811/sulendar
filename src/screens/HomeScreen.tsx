@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,43 +11,24 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Card, Calendar, Header } from '../components/ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
-import { DRINK_INFO, DrinkLog } from '../types';
-import { useAuth } from '../context';
-import { drinkLogsService } from '../services';
+import { DRINK_INFO } from '../types';
+import { useDrinkLogsByMonth, useDeleteDrinkLog } from '../hooks';
 
 interface Props {
   onAddDrink?: () => void;
 }
 
 export function HomeScreen({ onAddDrink }: Props) {
-  const { user } = useAuth();
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(today);
-  const [logs, setLogs] = useState<DrinkLog[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const loadMonthLogs = useCallback(async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
-    try {
-      const now = new Date();
-      const monthLogs = await drinkLogsService.getByMonth(
-        user.id,
-        now.getFullYear(),
-        now.getMonth() + 1
-      );
-      setLogs(monthLogs);
-    } catch (error) {
-      console.error('Failed to load logs:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    loadMonthLogs();
-  }, [loadMonthLogs]);
+  
+  const now = new Date();
+  const { data: logs = [], isLoading } = useDrinkLogsByMonth(
+    now.getFullYear(),
+    now.getMonth() + 1
+  );
+  
+  const deleteMutation = useDeleteDrinkLog();
 
   const selectedLogs = useMemo(() => {
     return logs.filter((log) => log.date === selectedDate);
@@ -81,13 +62,8 @@ export function HomeScreen({ onAddDrink }: Props) {
     return { totalMl, drinkDays, totalLogs: weekLogs.length };
   }, [logs]);
 
-  const handleDeleteLog = async (logId: string) => {
-    try {
-      await drinkLogsService.delete(logId);
-      setLogs((prev) => prev.filter((log) => log.id !== logId));
-    } catch (error) {
-      console.error('Failed to delete log:', error);
-    }
+  const handleDeleteLog = (logId: string) => {
+    deleteMutation.mutate(logId);
   };
 
   if (isLoading) {

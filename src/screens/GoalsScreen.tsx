@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,12 +10,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useQueryClient } from '@tanstack/react-query';
 import { Text, Card, Button, AmountSelector, Header } from '../components/ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
 import { useAuth } from '../context';
-import { goalsService, drinkLogsService } from '../services';
-import type { Goal } from '../types';
+import { goalsService } from '../services';
+import { useActiveGoals, useDrinkLogsByDateRange, goalsKeys } from '../hooks';
 
 interface GoalState {
   weeklyLimit: {
@@ -33,9 +34,8 @@ interface GoalState {
 
 export function GoalsScreen() {
   const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
-  const [weeklyUsed, setWeeklyUsed] = useState(0);
   const [goals, setGoals] = useState<GoalState>({
     weeklyLimit: {
       enabled: false,
@@ -50,13 +50,24 @@ export function GoalsScreen() {
     },
   });
 
-  const loadGoals = useCallback(async () => {
-    if (!user) return;
+  // 활성 목표 조회
+  const { data: activeGoals = [], isLoading: goalsLoading } = useActiveGoals();
 
-    setIsLoading(true);
-    try {
-      const activeGoals = await goalsService.getActive(user.id);
-      
+  // 이번 주 음주량 조회
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  const { data: weekLogs = [] } = useDrinkLogsByDateRange(
+    startOfWeek.toISOString().split('T')[0],
+    now.toISOString().split('T')[0]
+  );
+
+  const weeklyUsed = weekLogs.reduce((sum, log) => sum + log.amount, 0);
+  const isLoading = goalsLoading;
+
+  // 서버 데이터로 로컬 상태 동기화
+  useEffect(() => {
+    if (activeGoals.length > 0 || !goalsLoading) {
       const weeklyGoal = activeGoals.find((g) => g.type === 'weekly_limit');
       const soberGoal = activeGoals.find((g) => g.type === 'sober_challenge');
 
@@ -73,27 +84,8 @@ export function GoalsScreen() {
           goalId: soberGoal?.id || null,
         },
       });
-
-      const now = new Date();
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay());
-      const weekLogs = await drinkLogsService.getByDateRange(
-        user.id,
-        startOfWeek.toISOString().split('T')[0],
-        now.toISOString().split('T')[0]
-      );
-      const totalBottles = weekLogs.reduce((sum, log) => sum + log.amount, 0);
-      setWeeklyUsed(totalBottles);
-    } catch (error) {
-      console.error('Failed to load goals:', error);
-    } finally {
-      setIsLoading(false);
     }
-  }, [user]);
-
-  useEffect(() => {
-    loadGoals();
-  }, [loadGoals]);
+  }, [activeGoals, goalsLoading]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -154,6 +146,9 @@ export function GoalsScreen() {
           soberChallenge: { ...prev.soberChallenge, goalId: null, startDate: null },
         }));
       }
+
+      // 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: goalsKeys.all });
 
       const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
       if (isWeb) {

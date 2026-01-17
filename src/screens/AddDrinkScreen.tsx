@@ -19,8 +19,7 @@ import {
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import type { DrinkType } from '../components/ui';
-import { useAuth } from '../context';
-import { drinkLogsService } from '../services';
+import { useCreateDrinkLog } from '../hooks';
 
 type Step = 'select-drink' | 'select-amount';
 
@@ -45,49 +44,46 @@ interface Props {
 }
 
 export function AddDrinkScreen({ onClose, selectedDate }: Props) {
-  const { user } = useAuth();
   const [step, setStep] = useState<Step>('select-drink');
   const [selectedDrink, setSelectedDrink] = useState<DrinkType | null>(null);
   const [amount, setAmount] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
+
+  const createMutation = useCreateDrinkLog();
 
   const currentStep = step === 'select-drink' ? 1 : 2;
   const totalSteps = 2;
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (step === 'select-drink' && selectedDrink) {
       setStep('select-amount');
-    } else if (step === 'select-amount' && selectedDrink && user) {
-      setIsLoading(true);
-      try {
-        const date = selectedDate || new Date().toISOString().split('T')[0];
-        await drinkLogsService.create({
-          userId: user.id,
-          date,
-          drinkType: selectedDrink,
-          amount,
-        });
-        
-        const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
-        if (isWeb) {
-          window.alert('음주 기록이 저장되었습니다.');
-          onClose?.();
-        } else {
-          Alert.alert('저장 완료', '음주 기록이 저장되었습니다.', [
-            { text: '확인', onPress: onClose },
-          ]);
+    } else if (step === 'select-amount' && selectedDrink) {
+      const date = selectedDate || new Date().toISOString().split('T')[0];
+      
+      createMutation.mutate(
+        { date, drinkType: selectedDrink, amount },
+        {
+          onSuccess: () => {
+            const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
+            if (isWeb) {
+              window.alert('음주 기록이 저장되었습니다.');
+              onClose?.();
+            } else {
+              Alert.alert('저장 완료', '음주 기록이 저장되었습니다.', [
+                { text: '확인', onPress: onClose },
+              ]);
+            }
+          },
+          onError: (error: any) => {
+            const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
+            const message = error.message || '다시 시도해주세요';
+            if (isWeb) {
+              window.alert(`저장 실패: ${message}`);
+            } else {
+              Alert.alert('저장 실패', message);
+            }
+          },
         }
-      } catch (error: any) {
-        const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
-        const message = error.message || '다시 시도해주세요';
-        if (isWeb) {
-          window.alert(`저장 실패: ${message}`);
-        } else {
-          Alert.alert('저장 실패', message);
-        }
-      } finally {
-        setIsLoading(false);
-      }
+      );
     }
   };
 
@@ -189,10 +185,10 @@ export function AddDrinkScreen({ onClose, selectedDate }: Props) {
               size="lg"
               fullWidth={step === 'select-drink'}
               onPress={handleNext}
-              disabled={(step === 'select-drink' && !selectedDrink) || isLoading}
+              disabled={(step === 'select-drink' && !selectedDrink) || createMutation.isPending}
               style={step === 'select-amount' ? styles.flexButton : undefined}
             >
-              {isLoading ? '저장 중...' : step === 'select-drink' ? '다음' : '저장하기'}
+              {createMutation.isPending ? '저장 중...' : step === 'select-drink' ? '다음' : '저장하기'}
             </Button>
           </View>
         </View>
