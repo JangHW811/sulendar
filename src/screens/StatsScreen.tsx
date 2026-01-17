@@ -88,7 +88,7 @@ export function StatsScreen() {
   if (isLoading) {
     return (
       <LinearGradient
-        colors={[colors.background.primary, '#E8F4FC']}
+        colors={[colors.background.primary, '#ECFDF5']}
         style={[styles.gradient, styles.loadingContainer]}
       >
         <ActivityIndicator size="large" color={colors.primary.main} />
@@ -98,7 +98,7 @@ export function StatsScreen() {
 
   return (
     <LinearGradient
-      colors={[colors.background.primary, '#E8F4FC']}
+      colors={[colors.background.primary, '#ECFDF5']}
       style={styles.gradient}
     >
       <StatusBar barStyle="dark-content" />

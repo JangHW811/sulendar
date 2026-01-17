@@ -99,7 +99,7 @@ export function AddDrinkScreen({ onClose, selectedDate }: Props) {
 
   return (
     <LinearGradient
-      colors={[colors.background.primary, '#E8F4FC']}
+      colors={[colors.background.primary, '#ECFDF5']}
       style={styles.gradient}
     >
       <SafeAreaView style={styles.container}>

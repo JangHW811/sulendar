@@ -154,7 +154,7 @@ export function ConsultationScreen() {
 
   return (
     <LinearGradient
-      colors={[colors.background.primary, '#E8F4FC']}
+      colors={[colors.background.primary, '#ECFDF5']}
       style={styles.gradient}
     >
       <StatusBar barStyle="dark-content" />

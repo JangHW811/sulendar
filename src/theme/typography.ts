@@ -1,52 +1,81 @@
 /**
  * 술렌다 타이포그래피 시스템
- * Geometric Sans-serif 스타일
+ * Noto Sans KR 폰트 기반
  */
 
-import { TextStyle } from 'react-native';
+import { TextStyle, Platform } from 'react-native';
+
+// 플랫폼별 폰트 패밀리
+const fontFamily = {
+  regular: Platform.select({
+    web: '"Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    default: 'NotoSansKR_400Regular',
+  }),
+  medium: Platform.select({
+    web: '"Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    default: 'NotoSansKR_500Medium',
+  }),
+  bold: Platform.select({
+    web: '"Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    default: 'NotoSansKR_700Bold',
+  }),
+};
 
 export const typography = {
-  // Display - 큰 제목
+  // Display - 큰 숫자, 강조 텍스트
   display: {
-    fontSize: 26,
+    fontFamily: fontFamily.bold,
+    fontSize: 32,
     fontWeight: '700',
-    lineHeight: 34,
+    lineHeight: 40,
+    letterSpacing: -0.5,
   } as TextStyle,
 
   // Heading - 섹션 제목
   heading: {
-    fontSize: 20,
+    fontFamily: fontFamily.bold,
+    fontSize: 22,
     fontWeight: '700',
-    lineHeight: 28,
+    lineHeight: 30,
+    letterSpacing: -0.3,
   } as TextStyle,
 
   // Title - 카드/항목 제목
   title: {
+    fontFamily: fontFamily.medium,
     fontSize: 18,
-    fontWeight: '600',
-    lineHeight: 24,
+    fontWeight: '500',
+    lineHeight: 26,
+    letterSpacing: -0.2,
   } as TextStyle,
 
   // Body - 본문
   body: {
+    fontFamily: fontFamily.regular,
     fontSize: 16,
     fontWeight: '400',
     lineHeight: 24,
+    letterSpacing: 0,
   } as TextStyle,
 
   // Caption - 설명, 라벨
   caption: {
+    fontFamily: fontFamily.regular,
     fontSize: 14,
     fontWeight: '400',
     lineHeight: 20,
+    letterSpacing: 0.1,
   } as TextStyle,
 
   // Small - 작은 텍스트
   small: {
+    fontFamily: fontFamily.regular,
     fontSize: 12,
     fontWeight: '400',
     lineHeight: 16,
+    letterSpacing: 0.2,
   } as TextStyle,
 } as const;
 
+export { fontFamily };
 export type Typography = typeof typography;

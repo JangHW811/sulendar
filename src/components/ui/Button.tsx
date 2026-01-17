@@ -1,6 +1,6 @@
 /**
  * 술렌다 Button 컴포넌트
- * Pill 형태 버튼, Primary/Secondary/Ghost 변형
+ * 피그마 디자인 기반 - Pill 형태, 에메랄드 그린 테마
  */
 
 import React from 'react';
@@ -11,10 +11,10 @@ import {
   ViewStyle,
 } from 'react-native';
 import { colors } from '../../theme/colors';
-import { spacing, borderRadius } from '../../theme/spacing';
+import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { Text } from './Text';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends TouchableOpacityProps {
@@ -35,7 +35,7 @@ export function Button({
 }: ButtonProps) {
   const variantStyle = variantStyles[variant];
   const sizeStyle = sizeStyles[size];
-  const textColor = variant === 'primary' ? 'inverse' : 'primary';
+  const textColor = variant === 'primary' ? 'inverse' : variant === 'outline' ? 'primary' : 'primary';
 
   return (
     <TouchableOpacity
@@ -48,13 +48,14 @@ export function Button({
         style,
       ]}
       disabled={disabled}
-      activeOpacity={0.8}
+      activeOpacity={0.7}
       {...props}
     >
       <Text
         variant={size === 'lg' ? 'title' : 'body'}
         color={disabled ? 'muted' : textColor}
         center
+        style={variant === 'outline' ? { color: colors.primary.main } : undefined}
       >
         {children}
       </Text>
@@ -79,6 +80,7 @@ const styles = StyleSheet.create({
 const variantStyles: Record<ButtonVariant, ViewStyle> = {
   primary: {
     backgroundColor: colors.primary.main,
+    ...shadows.sm,
   },
   secondary: {
     backgroundColor: colors.background.glass,
@@ -87,6 +89,11 @@ const variantStyles: Record<ButtonVariant, ViewStyle> = {
   },
   ghost: {
     backgroundColor: 'transparent',
+  },
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: colors.primary.main,
   },
 };
 

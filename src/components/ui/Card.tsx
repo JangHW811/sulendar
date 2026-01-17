@@ -1,16 +1,16 @@
 /**
  * 술렌다 Card 컴포넌트
- * Glassmorphism 스타일 카드
+ * 피그마 디자인 기반 - 큰 border-radius, 부드러운 그림자
  */
 
 import React from 'react';
 import { View, ViewProps, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
-import { spacing, borderRadius } from '../../theme/spacing';
+import { spacing, borderRadius, shadows } from '../../theme/spacing';
 
 interface CardProps extends ViewProps {
-  variant?: 'default' | 'glass';
-  padding?: 'sm' | 'md' | 'lg';
+  variant?: 'default' | 'glass' | 'elevated';
+  padding?: 'sm' | 'md' | 'lg' | 'none';
   children: React.ReactNode;
 }
 
@@ -26,7 +26,7 @@ export function Card({
       style={[
         styles.base,
         variantStyles[variant],
-        paddingStyles[padding],
+        padding !== 'none' && paddingStyles[padding],
         style,
       ]}
       {...props}
@@ -45,16 +45,16 @@ const styles = StyleSheet.create({
 const variantStyles = StyleSheet.create({
   default: {
     backgroundColor: colors.background.card,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.md,
   },
   glass: {
     backgroundColor: colors.background.glass,
     borderWidth: 1,
     borderColor: colors.border.light,
+  },
+  elevated: {
+    backgroundColor: colors.background.secondary,
+    ...shadows.lg,
   },
 });
 
