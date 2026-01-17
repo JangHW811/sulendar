@@ -10,7 +10,14 @@ import {
 } from '../screens';
 import { MainTabParamList } from './types';
 import { colors } from '../theme/colors';
-import { Text } from '../components/ui';
+import {
+  Text,
+  HomeIcon,
+  ChartIcon,
+  TargetIcon,
+  ChatIcon,
+  UserIcon,
+} from '../components/ui';
 import { spacing } from '../theme/spacing';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -20,21 +27,22 @@ interface Props {
 }
 
 interface TabIconProps {
-  icon: string;
+  IconComponent: React.ComponentType<{ size?: number; color?: string; filled?: boolean }>;
   label: string;
   focused: boolean;
 }
 
-function TabIcon({ icon, label, focused }: TabIconProps) {
+function TabIcon({ IconComponent, label, focused }: TabIconProps) {
   return (
     <View style={styles.tabIcon}>
-      <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>
-        {icon}
-      </Text>
+      <IconComponent
+        size={24}
+        color={focused ? colors.primary.main : colors.text.muted}
+        filled={focused}
+      />
       <Text
         variant="small"
-        color={focused ? 'primary' : 'muted'}
-        style={focused && styles.tabLabelActive}
+        style={{ color: focused ? colors.primary.main : colors.text.muted, fontWeight: focused ? '600' : '400' }}
       >
         {label}
       </Text>
@@ -55,7 +63,7 @@ export function MainTabNavigator({ onAddDrink }: Props) {
         name="Home"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🏠" label="홈" focused={focused} />
+            <TabIcon IconComponent={HomeIcon} label="홈" focused={focused} />
           ),
         }}
       >
@@ -67,7 +75,7 @@ export function MainTabNavigator({ onAddDrink }: Props) {
         component={StatsScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="📊" label="통계" focused={focused} />
+            <TabIcon IconComponent={ChartIcon} label="통계" focused={focused} />
           ),
         }}
       />
@@ -77,7 +85,7 @@ export function MainTabNavigator({ onAddDrink }: Props) {
         component={GoalsScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🎯" label="목표" focused={focused} />
+            <TabIcon IconComponent={TargetIcon} label="목표" focused={focused} />
           ),
         }}
       />
@@ -87,7 +95,7 @@ export function MainTabNavigator({ onAddDrink }: Props) {
         component={ConsultationScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🤖" label="상담" focused={focused} />
+            <TabIcon IconComponent={ChatIcon} label="상담" focused={focused} />
           ),
         }}
       />
@@ -97,7 +105,7 @@ export function MainTabNavigator({ onAddDrink }: Props) {
         component={ProfileScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="👤" label="프로필" focused={focused} />
+            <TabIcon IconComponent={UserIcon} label="프로필" focused={focused} />
           ),
         }}
       />
@@ -116,16 +124,6 @@ const styles = StyleSheet.create({
   },
   tabIcon: {
     alignItems: 'center',
-    gap: 2,
-  },
-  tabEmoji: {
-    fontSize: 24,
-    opacity: 0.6,
-  },
-  tabEmojiActive: {
-    opacity: 1,
-  },
-  tabLabelActive: {
-    fontWeight: '600',
+    gap: 4,
   },
 });

@@ -9,7 +9,19 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Text, Button, Input, Card, Header } from '../components/ui';
+import {
+  Text,
+  Button,
+  Input,
+  Card,
+  Header,
+  BellIcon,
+  ExportIcon,
+  LockIcon,
+  DocumentIcon,
+  HelpIcon,
+  ChevronRightIcon,
+} from '../components/ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
 import { useAuth } from '../context';
@@ -111,11 +123,11 @@ export function ProfileScreen({ onLogout }: Props) {
   };
 
   const menuItems = [
-    { icon: '🔔', label: '알림 설정', onPress: () => {} },
-    { icon: '📊', label: '데이터 내보내기', onPress: () => {} },
-    { icon: '🔒', label: '개인정보 처리방침', onPress: () => {} },
-    { icon: '📄', label: '이용약관', onPress: () => {} },
-    { icon: '❓', label: '도움말', onPress: () => {} },
+    { IconComponent: BellIcon, label: '알림 설정', onPress: () => {} },
+    { IconComponent: ExportIcon, label: '데이터 내보내기', onPress: () => {} },
+    { IconComponent: LockIcon, label: '개인정보 처리방침', onPress: () => {} },
+    { IconComponent: DocumentIcon, label: '이용약관', onPress: () => {} },
+    { IconComponent: HelpIcon, label: '도움말', onPress: () => {} },
   ];
 
   const bmi = localProfile.weight && localProfile.height
@@ -250,10 +262,10 @@ export function ProfileScreen({ onLogout }: Props) {
               onPress={item.onPress}
             >
               <View style={styles.menuItemLeft}>
-                <Text style={styles.menuIcon}>{item.icon}</Text>
+                <item.IconComponent size={22} color={colors.text.secondary} />
                 <Text variant="body" color="primary">{item.label}</Text>
               </View>
-              <Text variant="body" color="muted">→</Text>
+              <ChevronRightIcon size={20} color={colors.text.muted} />
             </TouchableOpacity>
           ))}
         </Card>

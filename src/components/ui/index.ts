@@ -13,4 +13,27 @@ export { Input } from './Input';
 export { BarChart } from './BarChart';
 export { Header } from './Header';
 
+// 투톤 아이콘
+export {
+  HomeIcon,
+  ChartIcon,
+  TargetIcon,
+  ChatIcon,
+  UserIcon,
+  SojuIcon,
+  BeerIcon,
+  WineIcon,
+  WhiskeyIcon,
+  MakgeolliIcon,
+  EtcDrinkIcon,
+  BellIcon,
+  ExportIcon,
+  LockIcon,
+  DocumentIcon,
+  HelpIcon,
+  PlusIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from './Icons';
+
 export type { DrinkType } from './DrinkCard';

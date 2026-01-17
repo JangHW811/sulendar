@@ -8,11 +8,32 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Text, Card, Calendar, Header } from '../components/ui';
+import {
+  Text,
+  Card,
+  Calendar,
+  Header,
+  SojuIcon,
+  BeerIcon,
+  WineIcon,
+  WhiskeyIcon,
+  MakgeolliIcon,
+  EtcDrinkIcon,
+} from '../components/ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
-import { DRINK_INFO } from '../types';
+import { DRINK_INFO, DrinkType } from '../types';
 import { useDrinkLogsByMonth, useDeleteDrinkLog } from '../hooks';
+
+// 주종별 투톤 아이콘 매핑
+const DrinkIcons: Record<DrinkType, React.ComponentType<{ size?: number; color?: string }>> = {
+  soju: SojuIcon,
+  beer: BeerIcon,
+  wine: WineIcon,
+  whiskey: WhiskeyIcon,
+  makgeolli: MakgeolliIcon,
+  etc: EtcDrinkIcon,
+};
 
 interface Props {
   onAddDrink?: (selectedDate: string) => void;
@@ -194,12 +215,13 @@ export function HomeScreen({ onAddDrink }: Props) {
                     <View
                       style={[
                         styles.logIcon,
-                        { backgroundColor: `${colors.drinks[log.drinkType]}20` },
+                        { backgroundColor: `${colors.drinks[log.drinkType]}15` },
                       ]}
                     >
-                      <Text style={styles.logEmoji}>
-                        {DRINK_INFO[log.drinkType].icon}
-                      </Text>
+                      {React.createElement(DrinkIcons[log.drinkType], {
+                        size: 28,
+                        color: colors.drinks[log.drinkType],
+                      })}
                     </View>
                     <View style={styles.logInfo}>
                       <Text variant="title" color="primary">
