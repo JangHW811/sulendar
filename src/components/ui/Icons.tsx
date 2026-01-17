@@ -149,24 +149,23 @@ export function UserIcon({ size = 24, color = colors.text.secondary, filled = fa
 export function SojuIcon({ size = 32, color = colors.drinks.soju }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      {/* 병 몸통 */}
+      {/* 병뚜껑 - 작은 원통형 */}
+      <Rect x="14" y="2" width="4" height="3" rx="0.5" fill={color} />
+      {/* 병 목 - 일자로 올라가는 형태 */}
       <Path
-        d="M11 12C11 12 10 13 10 16V26C10 27.1046 10.8954 28 12 28H20C21.1046 28 22 27.1046 22 26V16C22 13 21 12 21 12"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      {/* 병 목 */}
-      <Path
-        d="M13 4H19V8C19 8 21 9 21 12H11C11 9 13 8 13 8V4Z"
+        d="M14 5V9H13C12 9 11 10 11 12H21C21 10 20 9 19 9H18V5"
         stroke={color}
         strokeWidth="2"
         strokeLinejoin="round"
       />
+      {/* 병 몸통 */}
+      <Path
+        d="M11 12V26C11 27.1046 11.8954 28 13 28H19C20.1046 28 21 27.1046 21 26V12"
+        stroke={color}
+        strokeWidth="2"
+      />
       {/* 라벨 */}
-      <Rect x="12" y="16" width="8" height="6" rx="1" fill={color} fillOpacity="0.3" />
-      {/* 병뚜껑 */}
-      <Rect x="14" y="2" width="4" height="2" rx="1" fill={color} />
+      <Rect x="13" y="16" width="6" height="6" rx="1" fill={color} fillOpacity="0.3" />
     </Svg>
   );
 }
