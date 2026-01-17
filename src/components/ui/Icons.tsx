@@ -144,77 +144,174 @@ export function UserIcon({ size = 24, color = colors.text.secondary, filled = fa
 }
 
 // 주종 아이콘들
+
+// 소주 - 초록색 소주병 모양
 export function SojuIcon({ size = 32, color = colors.drinks.soju }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <Rect x="10" y="4" width="12" height="24" rx="2" stroke={color} strokeWidth="2" />
-      <Rect x="12" y="8" width="8" height="4" fill={color} fillOpacity="0.3" />
-      <Path d="M10 12H22" stroke={color} strokeWidth="2" />
-    </Svg>
-  );
-}
-
-export function BeerIcon({ size = 32, color = colors.drinks.beer }: IconProps) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <Rect x="6" y="8" width="16" height="20" rx="2" stroke={color} strokeWidth="2" />
-      <Path d="M22 12H26C27.1046 12 28 12.8954 28 14V20C28 21.1046 27.1046 22 26 22H22" stroke={color} strokeWidth="2" />
-      <Rect x="8" y="10" width="12" height="6" fill={color} fillOpacity="0.3" />
-    </Svg>
-  );
-}
-
-export function WineIcon({ size = 32, color = colors.drinks.wine }: IconProps) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      {/* 병 몸통 */}
       <Path
-        d="M10 4H22L20 14C20 17.3137 18.2091 20 16 20C13.7909 20 12 17.3137 12 14L10 4Z"
+        d="M11 12C11 12 10 13 10 16V26C10 27.1046 10.8954 28 12 28H20C21.1046 28 22 27.1046 22 26V16C22 13 21 12 21 12"
         stroke={color}
         strokeWidth="2"
+        strokeLinecap="round"
       />
-      <Path d="M16 20V26" stroke={color} strokeWidth="2" />
-      <Path d="M12 26H20" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <Path d="M12 8C14 10 18 10 20 8" stroke={color} strokeWidth="2" fill={color} fillOpacity="0.3" />
-    </Svg>
-  );
-}
-
-export function WhiskeyIcon({ size = 32, color = colors.drinks.whiskey }: IconProps) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      {/* 병 목 */}
       <Path
-        d="M8 10L10 28H22L24 10H8Z"
+        d="M13 4H19V8C19 8 21 9 21 12H11C11 9 13 8 13 8V4Z"
         stroke={color}
         strokeWidth="2"
         strokeLinejoin="round"
       />
-      <Rect x="10" y="4" width="12" height="6" rx="1" stroke={color} strokeWidth="2" />
-      <Rect x="10" y="18" width="12" height="6" fill={color} fillOpacity="0.3" />
+      {/* 라벨 */}
+      <Rect x="12" y="16" width="8" height="6" rx="1" fill={color} fillOpacity="0.3" />
+      {/* 병뚜껑 */}
+      <Rect x="14" y="2" width="4" height="2" rx="1" fill={color} />
     </Svg>
   );
 }
 
-export function MakgeolliIcon({ size = 32, color = colors.drinks.makgeolli }: IconProps) {
+// 맥주 - 거품이 있는 맥주잔
+export function BeerIcon({ size = 32, color = colors.drinks.beer }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <Circle cx="16" cy="18" r="10" stroke={color} strokeWidth="2" />
-      <Circle cx="16" cy="18" r="6" fill={color} fillOpacity="0.2" />
-      <Path d="M16 4V8" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <Circle cx="16" cy="18" r="2" fill={color} />
-    </Svg>
-  );
-}
-
-export function EtcDrinkIcon({ size = 32, color = colors.drinks.etc }: IconProps) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      {/* 맥주잔 몸통 */}
       <Path
-        d="M12 4L8 16V26C8 27.1046 8.89543 28 10 28H22C23.1046 28 24 27.1046 24 26V16L20 4H12Z"
+        d="M6 10H20V26C20 27.1046 19.1046 28 18 28H8C6.89543 28 6 27.1046 6 26V10Z"
         stroke={color}
         strokeWidth="2"
       />
-      <Path d="M8 16H24" stroke={color} strokeWidth="2" />
-      <Rect x="12" y="18" width="8" height="6" fill={color} fillOpacity="0.3" />
+      {/* 손잡이 */}
+      <Path
+        d="M20 13H24C25.1046 13 26 13.8954 26 15V20C26 21.1046 25.1046 22 24 22H20"
+        stroke={color}
+        strokeWidth="2"
+      />
+      {/* 거품 */}
+      <Path
+        d="M6 10C6 10 7 8 9 8C11 8 11 6 13 6C15 6 15 8 17 8C19 8 20 10 20 10"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      {/* 거품 채우기 */}
+      <Path
+        d="M7 10C7 10 8 8.5 9.5 8.5C11 8.5 11.5 7 13 7C14.5 7 15 8.5 16.5 8.5C18 8.5 19 10 19 10V12H7V10Z"
+        fill={color}
+        fillOpacity="0.2"
+      />
+      {/* 맥주 */}
+      <Rect x="7" y="12" width="12" height="10" fill={color} fillOpacity="0.3" />
+    </Svg>
+  );
+}
+
+// 와인 - 둥글고 넓은 와인잔
+export function WineIcon({ size = 32, color = colors.drinks.wine }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      {/* 와인잔 볼 (둥글고 넓게) */}
+      <Path
+        d="M8 6H24V10C24 15.5228 20.4183 20 16 20C11.5817 20 8 15.5228 8 10V6Z"
+        stroke={color}
+        strokeWidth="2"
+      />
+      {/* 와인 */}
+      <Path
+        d="M9 10C9 14 12 17 16 17C20 17 23 14 23 10V9H9V10Z"
+        fill={color}
+        fillOpacity="0.3"
+      />
+      {/* 줄기 */}
+      <Path d="M16 20V26" stroke={color} strokeWidth="2" />
+      {/* 받침대 */}
+      <Path
+        d="M11 26H21C21 26 20 28 16 28C12 28 11 26 11 26Z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+// 위스키 - 낮은 잔 (온더락 글라스)
+export function WhiskeyIcon({ size = 32, color = colors.drinks.whiskey }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      {/* 잔 몸통 - 살짝 기울어진 사각형 */}
+      <Path
+        d="M7 10L9 26C9 27.1046 9.89543 28 11 28H21C22.1046 28 23 27.1046 23 26L25 10H7Z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      {/* 위스키 */}
+      <Path
+        d="M9 18L10 26C10 26.5 10.5 27 11 27H21C21.5 27 22 26.5 22 26L23 18H9Z"
+        fill={color}
+        fillOpacity="0.3"
+      />
+      {/* 얼음 표현 */}
+      <Rect x="12" y="20" width="3" height="3" rx="0.5" stroke={color} strokeWidth="1" strokeOpacity="0.5" />
+      <Rect x="17" y="21" width="3" height="3" rx="0.5" stroke={color} strokeWidth="1" strokeOpacity="0.5" />
+      {/* 잔 윗부분 두께 */}
+      <Path d="M7 10H25" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+// 막걸리 - 전통 호리병 모양
+export function MakgeolliIcon({ size = 32, color = colors.drinks.makgeolli }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      {/* 호리병 몸통 - 아래가 둥글고 위가 좁음 */}
+      <Path
+        d="M16 10C12 10 9 14 9 20C9 24.4183 12.134 28 16 28C19.866 28 23 24.4183 23 20C23 14 20 10 16 10Z"
+        stroke={color}
+        strokeWidth="2"
+      />
+      {/* 호리병 목 */}
+      <Path
+        d="M14 10V6C14 5 14.5 4 16 4C17.5 4 18 5 18 6V10"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      {/* 막걸리 (하얀색 표현) */}
+      <Path
+        d="M10 20C10 23.5 12.5 27 16 27C19.5 27 22 23.5 22 20C22 17 20 14 16 14C12 14 10 17 10 20Z"
+        fill={color}
+        fillOpacity="0.2"
+      />
+      {/* 마개 */}
+      <Circle cx="16" cy="4" r="2" fill={color} fillOpacity="0.5" />
+    </Svg>
+  );
+}
+
+// 기타 - 칵테일 글라스
+export function EtcDrinkIcon({ size = 32, color = colors.drinks.etc }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      {/* 칵테일 잔 (마티니 글라스) */}
+      <Path
+        d="M6 6H26L16 18V26"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* 받침대 */}
+      <Path d="M12 26H20" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      {/* 음료 */}
+      <Path
+        d="M9 9H23L16 16L9 9Z"
+        fill={color}
+        fillOpacity="0.3"
+      />
+      {/* 장식 (올리브/체리) */}
+      <Circle cx="20" cy="8" r="2" fill={color} fillOpacity="0.5" />
     </Svg>
   );
 }
