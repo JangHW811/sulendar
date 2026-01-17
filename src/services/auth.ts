@@ -1,8 +1,11 @@
-import { supabase } from '../lib/supabase';
+import { supabase, isWeb } from '../lib/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 
-WebBrowser.maybeCompleteAuthSession();
+// 네이티브에서만 WebBrowser 세션 완료 처리
+if (!isWeb) {
+  WebBrowser.maybeCompleteAuthSession();
+}
 
 export interface SignUpParams {
   email: string;
@@ -60,61 +63,94 @@ export const authService = {
   },
 
   async signInWithOAuth(provider: OAuthProvider) {
-    const redirectUrl = 'https://spaieqwgqpaxmhmkvdqp.supabase.co/auth/v1/callback';
-    
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: redirectUrl,
-        skipBrowserRedirect: true,
-      },
-    });
-
-    if (error) throw error;
-    if (!data.url) throw new Error('OAuth URL을 가져올 수 없습니다');
-
-    const result = await WebBrowser.openAuthSessionAsync(
-      data.url,
-      redirectUrl
-    );
-
-    if (result.type === 'success') {
-      const url = result.url;
+    if (isWeb) {
+      // 웹: 현재 URL로 리다이렉트 (Supabase가 URL 파라미터에서 세션 자동 감지)
+      const redirectUrl = window.location.origin;
       
-      let accessToken: string | null = null;
-      let refreshToken: string | null = null;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: redirectUrl,
+          // 웹에서는 브라우저 리다이렉트 허용
+          skipBrowserRedirect: false,
+        },
+      });
 
-      if (url.includes('#')) {
-        const params = url.split('#')[1];
-        const urlParams = new URLSearchParams(params);
-        accessToken = urlParams.get('access_token');
-        refreshToken = urlParams.get('refresh_token');
-      }
+      if (error) throw error;
+      
+      // 웹에서는 페이지가 리다이렉트되므로 여기서 반환
+      // OAuth 콜백 후 Supabase가 자동으로 세션 설정
+      return data;
+    } else {
+      // 네이티브: WebBrowser를 사용한 인앱 브라우저
+      const redirectUrl = Linking.createURL('auth/callback');
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
+        },
+      });
 
-      if (accessToken && refreshToken) {
-        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
+      if (error) throw error;
+      if (!data.url) throw new Error('OAuth URL을 가져올 수 없습니다');
 
-        if (sessionError) throw sessionError;
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectUrl
+      );
 
-        if (sessionData.user) {
-          const existingProfile = await this.getProfile(sessionData.user.id);
-          if (!existingProfile) {
-            await supabase.from('profiles').insert({
-              id: sessionData.user.id,
-              email: sessionData.user.email || '',
-              name: sessionData.user.user_metadata?.name || sessionData.user.user_metadata?.full_name || null,
-            });
-          }
+      if (result.type === 'success') {
+        const url = result.url;
+        
+        let accessToken: string | null = null;
+        let refreshToken: string | null = null;
+
+        if (url.includes('#')) {
+          const params = url.split('#')[1];
+          const urlParams = new URLSearchParams(params);
+          accessToken = urlParams.get('access_token');
+          refreshToken = urlParams.get('refresh_token');
         }
 
-        return sessionData;
-      }
-    }
+        if (accessToken && refreshToken) {
+          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
 
-    throw new Error('로그인이 취소되었습니다');
+          if (sessionError) throw sessionError;
+
+          // 프로필 자동 생성 (네이티브)
+          if (sessionData.user) {
+            await this.ensureProfile(sessionData.user);
+          }
+
+          return sessionData;
+        }
+      }
+
+      throw new Error('로그인이 취소되었습니다');
+    }
+  },
+
+  // OAuth 후 프로필 존재 확인 및 생성
+  async ensureProfile(user: { id: string; email?: string; user_metadata?: any }) {
+    const existingProfile = await this.getProfile(user.id);
+    if (!existingProfile) {
+      // 카카오: nickname, 구글: name 또는 full_name
+      const name = user.user_metadata?.nickname 
+        || user.user_metadata?.name 
+        || user.user_metadata?.full_name 
+        || null;
+      
+      await supabase.from('profiles').insert({
+        id: user.id,
+        email: user.email || '',
+        name,
+      });
+    }
   },
 
   async signOut() {

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { authService, UserProfile, OAuthProvider } from '../services/auth';
+import { isWeb } from '../lib/supabase';
 
 interface AuthContextType {
   session: Session | null;
@@ -33,11 +34,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     });
 
-    const { data: { subscription } } = authService.onAuthStateChange((_event, sess) => {
+    const { data: { subscription } } = authService.onAuthStateChange(async (event, sess) => {
       setSession(sess);
       setUser(sess?.user ?? null);
+      
       if (sess?.user) {
-        authService.getProfile(sess.user.id).then(setProfile);
+        // OAuth 로그인 시 프로필 자동 생성 (웹에서 특히 중요)
+        if (event === 'SIGNED_IN') {
+          await authService.ensureProfile(sess.user);
+        }
+        const prof = await authService.getProfile(sess.user.id);
+        setProfile(prof);
       } else {
         setProfile(null);
       }
@@ -58,7 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithOAuth = async (provider: OAuthProvider) => {
     const result = await authService.signInWithOAuth(provider);
-    if (result?.session) {
+    
+    // 웹: 페이지가 리다이렉트되므로 여기서 끝 (onAuthStateChange가 처리)
+    if (isWeb) {
+      return;
+    }
+    
+    // 네이티브: 세션 직접 설정
+    if (result && 'session' in result && result.session) {
       setSession(result.session);
       setUser(result.session.user ?? null);
       if (result.session.user) {
