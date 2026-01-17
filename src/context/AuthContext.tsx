@@ -25,25 +25,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const initAuth = async () => {
       try {
         const sess = await authService.getSession();
+        if (!isMounted) return;
+        
         setSession(sess);
         setUser(sess?.user ?? null);
+        
         if (sess?.user) {
-          const prof = await authService.getProfile(sess.user.id);
-          setProfile(prof);
+          try {
+            const prof = await authService.getProfile(sess.user.id);
+            if (isMounted) setProfile(prof);
+          } catch (profileError) {
+            console.error('Profile fetch error:', profileError);
+          }
         }
       } catch (error) {
         console.error('Auth init error:', error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     initAuth();
 
     const { data: { subscription } } = authService.onAuthStateChange(async (event, sess) => {
+      if (!isMounted) return;
+      
+      console.log('Auth state change:', event);
       setSession(sess);
       setUser(sess?.user ?? null);
       
@@ -54,16 +66,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await authService.ensureProfile(sess.user);
           }
           const prof = await authService.getProfile(sess.user.id);
-          setProfile(prof);
+          if (isMounted) setProfile(prof);
         } catch (error) {
           console.error('Profile fetch error:', error);
         }
       } else {
         setProfile(null);
       }
+      
+      // 인증 상태 변경 후 로딩 해제
+      if (isMounted) setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

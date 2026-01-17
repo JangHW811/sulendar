@@ -78,9 +78,10 @@ export function HomeScreen({ onAddDrink }: Props) {
     });
 
     const totalMl = weekLogs.reduce((sum, log) => sum + log.volumeMl, 0);
-    const drinkDays = new Set(weekLogs.map((log) => log.date)).size;
+    // 날짜를 YYYY-MM-DD 형식으로 정규화하여 중복 제거 (같은 날 여러 주종 = 1일)
+    const drinkDays = new Set(weekLogs.map((log) => log.date.split('T')[0])).size;
 
-    return { totalMl, drinkDays, totalLogs: weekLogs.length };
+    return { totalMl, drinkDays };
   }, [logs]);
 
   const handleDeleteLog = (logId: string) => {

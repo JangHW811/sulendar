@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './AuthNavigator';
@@ -10,10 +10,28 @@ import { colors } from '../theme/colors';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+const LOADING_TIMEOUT_MS = 10000; // 10초 타임아웃
+
 export function RootNavigator() {
   const { session, isLoading } = useAuth();
+  const [forceShowAuth, setForceShowAuth] = useState(false);
 
-  if (isLoading) {
+  // 로딩 타임아웃 - 10초 지나면 로그인 화면으로
+  useEffect(() => {
+    if (!isLoading) {
+      setForceShowAuth(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      console.warn('Auth loading timeout - showing login screen');
+      setForceShowAuth(true);
+    }, LOADING_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  if (isLoading && !forceShowAuth) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary.main} />
@@ -21,9 +39,11 @@ export function RootNavigator() {
     );
   }
 
+  const shouldShowAuth = !session || forceShowAuth;
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!session ? (
+      {shouldShowAuth ? (
         <Stack.Screen name="Auth" component={AuthNavigator} />
       ) : (
         <>

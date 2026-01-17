@@ -2,7 +2,7 @@
  * 술렌다 - AI 건강 상담 화면
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,6 +18,10 @@ import { Text, Card, Button, Header } from '../components/ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
 import { typography } from '../theme/typography';
+import { useDrinkLogsByDateRange } from '../hooks';
+import { DRINK_INFO } from '../types';
+import { useAuth } from '../context';
+import { geminiService, ChatMessage } from '../services';
 
 interface Message {
   id: string;
@@ -26,20 +30,43 @@ interface Message {
   timestamp: Date;
 }
 
-// 목업 데이터 - 이번 주 음주 요약
-const WEEKLY_SUMMARY = {
-  totalMl: 2160,
-  drinkDays: 3,
-  mainDrink: '소주',
-  avgPerDay: 720,
-};
-
 export function ConsultationScreen() {
+  const { profile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [hasWatchedAd, setHasWatchedAd] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // 이번 주 음주 데이터 조회
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  
+  const { data: weekLogs = [] } = useDrinkLogsByDateRange(
+    startOfWeek.toISOString().split('T')[0],
+    now.toISOString().split('T')[0]
+  );
+
+  // 주간 요약 계산
+  const weeklySummary = useMemo(() => {
+    const totalMl = weekLogs.reduce((sum, log) => sum + log.volumeMl, 0);
+    // 날짜를 YYYY-MM-DD 형식으로 정규화하여 중복 제거
+    const drinkDays = new Set(weekLogs.map((log) => log.date.split('T')[0])).size;
+    
+    // 가장 많이 마신 주종 찾기
+    const drinkTotals: Record<string, number> = {};
+    weekLogs.forEach((log) => {
+      drinkTotals[log.drinkType] = (drinkTotals[log.drinkType] || 0) + log.volumeMl;
+    });
+    
+    const mainDrinkType = Object.entries(drinkTotals)
+      .sort(([, a], [, b]) => b - a)[0]?.[0] || null;
+    const mainDrink = mainDrinkType ? DRINK_INFO[mainDrinkType as keyof typeof DRINK_INFO]?.label : '없음';
+
+    return { totalMl, drinkDays, mainDrink, logs: weekLogs };
+  }, [weekLogs]);
 
   const handleWatchAd = () => {
     // TODO: AdMob 리워드 광고 연동
@@ -53,20 +80,21 @@ export function ConsultationScreen() {
         {
           id: '0',
           role: 'assistant',
-          content: `안녕하세요! 저는 술렌다 AI 건강 상담사입니다. 🏥\n\n이번 주 음주 기록을 분석해봤어요:\n• 총 음주량: ${(WEEKLY_SUMMARY.totalMl / 1000).toFixed(1)}L\n• 음주일: ${WEEKLY_SUMMARY.drinkDays}일\n• 주로 마신 술: ${WEEKLY_SUMMARY.mainDrink}\n\n궁금한 점이 있으시면 편하게 물어보세요!`,
+          content: `안녕하세요! 저는 술렌다 AI 건강 상담사입니다. 🏥\n\n이번 주 음주 기록을 분석해봤어요:\n• 총 음주량: ${(weeklySummary.totalMl / 1000).toFixed(1)}L\n• 음주일: ${weeklySummary.drinkDays}일\n• 주로 마신 술: ${weeklySummary.mainDrink}\n\n궁금한 점이 있으시면 편하게 물어보세요!`,
           timestamp: new Date(),
         },
       ]);
     }, 2000);
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputText.trim() || isLoading) return;
 
+    const userText = inputText.trim();
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputText.trim(),
+      content: userText,
       timestamp: new Date(),
     };
 
@@ -74,25 +102,48 @@ export function ConsultationScreen() {
     setInputText('');
     setIsLoading(true);
 
-    // TODO: Gemini API 연동
-    // 목업 응답
-    setTimeout(() => {
-      const responses = [
-        '좋은 질문이에요! 이번 주 음주량을 보면, 하루 평균 알코올 섭취량이 권장량을 약간 초과하고 있어요. 간 건강을 위해 주 2-3일은 금주일로 두시는 것을 추천드려요.',
-        '음주 후 충분한 수분 섭취와 휴식이 중요합니다. 물을 많이 마시고, 다음 날 가벼운 운동을 해보시는 건 어떨까요?',
-        '체중과 음주량을 고려했을 때, 현재 페이스라면 건강에 큰 무리는 없지만, 장기적으로는 조금씩 줄여나가시는 것이 좋겠습니다.',
-      ];
+    try {
+      // Gemini API 호출
+      const userContext = profile ? {
+        weight: profile.weight ?? undefined,
+        height: profile.height ?? undefined,
+        name: profile.name ?? undefined,
+      } : undefined;
+      
+      const response = await geminiService.chat(
+        userText,
+        conversationHistory,
+        weeklySummary,
+        userContext
+      );
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: responses[Math.floor(Math.random() * responses.length)],
+        content: response,
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+
+      // 대화 히스토리 업데이트 (Gemini API 형식)
+      setConversationHistory((prev) => [
+        ...prev,
+        { role: 'user', parts: [{ text: userText }] },
+        { role: 'model', parts: [{ text: response }] },
+      ]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: '죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const suggestedQuestions = [
@@ -132,10 +183,10 @@ export function ConsultationScreen() {
               <Text variant="caption" color="secondary">이번 주 음주 요약</Text>
               <View style={styles.previewRow}>
                 <Text variant="title" color="primary">
-                  {(WEEKLY_SUMMARY.totalMl / 1000).toFixed(1)}L
+                  {(weeklySummary.totalMl / 1000).toFixed(1)}L
                 </Text>
                 <Text variant="body" color="secondary">
-                  / {WEEKLY_SUMMARY.drinkDays}일
+                  / {weeklySummary.drinkDays}일
                 </Text>
               </View>
             </Card>

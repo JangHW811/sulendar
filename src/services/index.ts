@@ -6,3 +6,9 @@ export type { CreateDrinkLogParams } from './drinkLogs';
 
 export { goalsService } from './goals';
 export type { CreateGoalParams } from './goals';
+
+export { geminiService } from './gemini';
+export type { WeeklySummary, UserContext, ChatMessage } from './gemini';
+
+export { consultationsService } from './consultations';
+export type { CreateConsultationParams } from './consultations';
