@@ -62,26 +62,40 @@ export function ProfileScreen({ onLogout }: Props) {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      '로그아웃',
-      '정말 로그아웃 하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '로그아웃',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut();
-              onLogout?.();
-            } catch (error) {
-              console.error('Logout failed:', error);
-            }
+  const handleLogout = async () => {
+    // 웹에서는 confirm, 네이티브에서는 Alert 사용
+    const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
+    
+    if (isWeb) {
+      if (window.confirm('정말 로그아웃 하시겠습니까?')) {
+        try {
+          await signOut();
+          onLogout?.();
+        } catch (error) {
+          console.error('Logout failed:', error);
+        }
+      }
+    } else {
+      Alert.alert(
+        '로그아웃',
+        '정말 로그아웃 하시겠습니까?',
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '로그아웃',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await signOut();
+                onLogout?.();
+              } catch (error) {
+                console.error('Logout failed:', error);
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const menuItems = [
