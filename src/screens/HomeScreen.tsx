@@ -35,13 +35,34 @@ export function HomeScreen({ onAddDrink }: Props) {
   }, [logs, selectedDate]);
 
   const markedDates = useMemo(() => {
-    const marks: Record<string, { marked: boolean; color: string }> = {};
+    // 날짜별로 주종별 음주량 집계
+    const dateStats: Record<string, Record<string, number>> = {};
+    
     logs.forEach((log) => {
-      marks[log.date] = {
+      if (!dateStats[log.date]) {
+        dateStats[log.date] = {};
+      }
+      if (!dateStats[log.date][log.drinkType]) {
+        dateStats[log.date][log.drinkType] = 0;
+      }
+      dateStats[log.date][log.drinkType] += log.volumeMl;
+    });
+
+    // 날짜별로 상위 3개 주종 색상 추출
+    const marks: Record<string, { marked: boolean; colors: string[] }> = {};
+    
+    Object.entries(dateStats).forEach(([date, drinkTotals]) => {
+      const sortedDrinks = Object.entries(drinkTotals)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([drinkType]) => colors.drinks[drinkType as keyof typeof colors.drinks]);
+      
+      marks[date] = {
         marked: true,
-        color: colors.drinks[log.drinkType],
+        colors: sortedDrinks,
       };
     });
+
     return marks;
   }, [logs]);
 

@@ -11,7 +11,7 @@ import { Text } from './Text';
 
 interface CalendarProps {
   selectedDate: string; // YYYY-MM-DD
-  markedDates?: Record<string, { marked?: boolean; color?: string }>;
+  markedDates?: Record<string, { marked?: boolean; colors?: string[] }>;
   onSelectDate: (date: string) => void;
   onMonthChange?: (year: number, month: number) => void;
 }
@@ -160,13 +160,18 @@ export function Calendar({
                 >
                   {day}
                 </Text>
-                {marked?.marked && (
-                  <View
-                    style={[
-                      styles.marker,
-                      { backgroundColor: marked.color || colors.primary.main },
-                    ]}
-                  />
+                {marked?.marked && marked.colors && marked.colors.length > 0 && (
+                  <View style={styles.markerContainer}>
+                    {marked.colors.slice(0, 3).map((markerColor, idx) => (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.marker,
+                          { backgroundColor: markerColor },
+                        ]}
+                      />
+                    ))}
+                  </View>
                 )}
               </View>
             </TouchableOpacity>
@@ -228,11 +233,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.primary.main,
   },
-  marker: {
+  markerContainer: {
     position: 'absolute',
     bottom: 4,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    flexDirection: 'row',
+    gap: 2,
+  },
+  marker: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
 });
