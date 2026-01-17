@@ -71,16 +71,27 @@ export function RegisterScreen({ onNavigateToLogin }: Props) {
     setIsLoading(true);
     try {
       await signUp(formData.email, formData.password, formData.name);
-      Alert.alert(
-        '회원가입 완료',
-        '이메일 인증 후 로그인해주세요.',
-        [{ text: '확인', onPress: onNavigateToLogin }]
-      );
+      
+      // 웹/네이티브 분기
+      const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
+      if (isWeb) {
+        window.alert('회원가입 완료! 이메일 인증 후 로그인해주세요.');
+        onNavigateToLogin?.();
+      } else {
+        Alert.alert(
+          '회원가입 완료',
+          '이메일 인증 후 로그인해주세요.',
+          [{ text: '확인', onPress: onNavigateToLogin }]
+        );
+      }
     } catch (error: any) {
-      Alert.alert(
-        '회원가입 실패',
-        error.message || '다시 시도해주세요'
-      );
+      const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
+      const message = error.message || '다시 시도해주세요';
+      if (isWeb) {
+        window.alert(`회원가입 실패: ${message}`);
+      } else {
+        Alert.alert('회원가입 실패', message);
+      }
     } finally {
       setIsLoading(false);
     }

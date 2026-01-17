@@ -67,11 +67,24 @@ export function AddDrinkScreen({ onClose, selectedDate }: Props) {
           drinkType: selectedDrink,
           amount,
         });
-        Alert.alert('저장 완료', '음주 기록이 저장되었습니다.', [
-          { text: '확인', onPress: onClose },
-        ]);
+        
+        const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
+        if (isWeb) {
+          window.alert('음주 기록이 저장되었습니다.');
+          onClose?.();
+        } else {
+          Alert.alert('저장 완료', '음주 기록이 저장되었습니다.', [
+            { text: '확인', onPress: onClose },
+          ]);
+        }
       } catch (error: any) {
-        Alert.alert('저장 실패', error.message || '다시 시도해주세요');
+        const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
+        const message = error.message || '다시 시도해주세요';
+        if (isWeb) {
+          window.alert(`저장 실패: ${message}`);
+        } else {
+          Alert.alert('저장 실패', message);
+        }
       } finally {
         setIsLoading(false);
       }

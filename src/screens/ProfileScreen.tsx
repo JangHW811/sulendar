@@ -54,9 +54,21 @@ export function ProfileScreen({ onLogout }: Props) {
         height: localProfile.height ? Number(localProfile.height) : undefined,
       });
       setIsEditing(false);
-      Alert.alert('저장 완료', '프로필이 업데이트되었습니다.');
+      
+      const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
+      if (isWeb) {
+        window.alert('프로필이 업데이트되었습니다.');
+      } else {
+        Alert.alert('저장 완료', '프로필이 업데이트되었습니다.');
+      }
     } catch (error: any) {
-      Alert.alert('저장 실패', error.message || '다시 시도해주세요');
+      const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
+      const message = error.message || '다시 시도해주세요';
+      if (isWeb) {
+        window.alert(`저장 실패: ${message}`);
+      } else {
+        Alert.alert('저장 실패', message);
+      }
     } finally {
       setIsSaving(false);
     }
