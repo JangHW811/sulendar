@@ -36,7 +36,20 @@ export const authService = {
       password,
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      // Supabase 에러 메시지 한글화
+      if (authError.message.includes('already registered')) {
+        throw new Error('이미 가입된 이메일입니다');
+      }
+      if (authError.message.includes('invalid')) {
+        throw new Error('올바른 이메일 형식이 아닙니다');
+      }
+      if (authError.message.includes('Password')) {
+        throw new Error('비밀번호는 6자 이상이어야 합니다');
+      }
+      throw new Error(authError.message || '회원가입에 실패했습니다');
+    }
+    
     if (!authData.user) throw new Error('회원가입에 실패했습니다');
 
     const { error: profileError } = await supabase
@@ -47,7 +60,10 @@ export const authService = {
         name,
       });
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error('Profile creation error:', profileError);
+      // 프로필 생성 실패해도 회원가입은 성공으로 처리 (나중에 생성 가능)
+    }
 
     return authData;
   },
