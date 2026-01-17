@@ -5,7 +5,7 @@
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
-  AddDrink: undefined;
+  AddDrink: { selectedDate?: string };
 };
 
 export type AuthStackParamList = {

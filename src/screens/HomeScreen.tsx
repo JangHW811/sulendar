@@ -15,7 +15,7 @@ import { DRINK_INFO } from '../types';
 import { useDrinkLogsByMonth, useDeleteDrinkLog } from '../hooks';
 
 interface Props {
-  onAddDrink?: () => void;
+  onAddDrink?: (selectedDate: string) => void;
 }
 
 export function HomeScreen({ onAddDrink }: Props) {
@@ -142,7 +142,7 @@ export function HomeScreen({ onAddDrink }: Props) {
             </Text>
             <TouchableOpacity
               style={styles.addButton}
-              onPress={onAddDrink}
+              onPress={() => onAddDrink?.(selectedDate)}
               activeOpacity={0.7}
             >
               <Text variant="body" color="inverse">+ 추가</Text>

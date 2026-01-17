@@ -16,7 +16,7 @@ import { spacing } from '../theme/spacing';
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 interface Props {
-  onAddDrink: () => void;
+  onAddDrink: (selectedDate: string) => void;
 }
 
 interface TabIconProps {

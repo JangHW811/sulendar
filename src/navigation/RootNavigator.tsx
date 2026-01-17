@@ -29,7 +29,9 @@ export function RootNavigator() {
         <>
           <Stack.Screen name="Main">
             {({ navigation }) => (
-              <MainTabNavigator onAddDrink={() => navigation.navigate('AddDrink')} />
+              <MainTabNavigator 
+                onAddDrink={(selectedDate) => navigation.navigate('AddDrink', { selectedDate })} 
+              />
             )}
           </Stack.Screen>
           <Stack.Screen
@@ -39,8 +41,11 @@ export function RootNavigator() {
               animation: 'slide_from_bottom',
             }}
           >
-            {({ navigation }) => (
-              <AddDrinkScreen onClose={() => navigation.goBack()} />
+            {({ navigation, route }) => (
+              <AddDrinkScreen 
+                onClose={() => navigation.goBack()} 
+                selectedDate={route.params?.selectedDate}
+              />
             )}
           </Stack.Screen>
         </>
