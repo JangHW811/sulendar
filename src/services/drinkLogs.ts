@@ -36,7 +36,37 @@ function rowToLog(row: DrinkLogRow): DrinkLog {
 
 export const drinkLogsService = {
   async create(params: CreateDrinkLogParams): Promise<DrinkLog> {
-    const volumeMl = params.amount * DRINK_INFO[params.drinkType].mlPerBottle;
+    // 같은 날짜 + 같은 주종이 이미 있는지 확인
+    const { data: existing } = await supabase
+      .from('drink_logs')
+      .select('*')
+      .eq('user_id', params.userId)
+      .eq('date', params.date)
+      .eq('drink_type', params.drinkType)
+      .single();
+
+    if (existing) {
+      // 이미 있으면 수량 합산
+      const newAmount = existing.amount + params.amount;
+      const newVolumeMl = newAmount * DRINK_INFO[params.drinkType].mlPerUnit;
+
+      const { data, error } = await supabase
+        .from('drink_logs')
+        .update({
+          amount: newAmount,
+          volume_ml: newVolumeMl,
+          memo: params.memo || existing.memo, // 메모는 새 값 우선
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return rowToLog(data);
+    }
+
+    // 없으면 새로 생성
+    const volumeMl = params.amount * DRINK_INFO[params.drinkType].mlPerUnit;
 
     const { data, error } = await supabase
       .from('drink_logs')
@@ -108,7 +138,7 @@ export const drinkLogsService = {
         .single();
       
       if (existing) {
-        updateData.volume_ml = updates.amount * DRINK_INFO[existing.drink_type as DrinkType].mlPerBottle;
+        updateData.volume_ml = updates.amount * DRINK_INFO[existing.drink_type as DrinkType].mlPerUnit;
       }
     }
 

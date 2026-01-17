@@ -152,7 +152,7 @@ export function ProfileScreen({ onLogout }: Props) {
     >
       <StatusBar barStyle="dark-content" />
 
-      <Header title="프로필" emoji="👤" />
+      <Header title="프로필" />
 
       <ScrollView
         style={styles.content}

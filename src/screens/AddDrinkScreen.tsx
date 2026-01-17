@@ -1,41 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   StatusBar,
   Alert,
+  Animated,
+  Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Text,
   Button,
-  ProgressBar,
   DrinkCard,
   AmountSelector,
-  Card,
 } from '../components/ui';
 import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
+import { spacing, borderRadius } from '../theme/spacing';
 import type { DrinkType } from '../components/ui';
 import { useCreateDrinkLog } from '../hooks';
-
-type Step = 'select-drink' | 'select-amount';
+import { DRINK_INFO } from '../types';
 
 interface DrinkOption {
   type: DrinkType;
   label: string;
-  icon: string;
 }
 
 const drinkOptions: DrinkOption[] = [
-  { type: 'soju', label: '소주', icon: '🍶' },
-  { type: 'beer', label: '맥주', icon: '🍺' },
-  { type: 'wine', label: '와인', icon: '🍷' },
-  { type: 'whiskey', label: '위스키', icon: '🥃' },
-  { type: 'makgeolli', label: '막걸리', icon: '🍵' },
-  { type: 'etc', label: '기타', icon: '🍸' },
+  { type: 'soju', label: '소주' },
+  { type: 'beer', label: '맥주' },
+  { type: 'wine', label: '와인' },
+  { type: 'whiskey', label: '위스키' },
+  { type: 'makgeolli', label: '막걸리' },
+  { type: 'etc', label: '기타' },
 ];
 
 interface Props {
@@ -44,53 +42,75 @@ interface Props {
 }
 
 export function AddDrinkScreen({ onClose, selectedDate }: Props) {
-  const [step, setStep] = useState<Step>('select-drink');
   const [selectedDrink, setSelectedDrink] = useState<DrinkType | null>(null);
   const [amount, setAmount] = useState(1);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const currentScrollY = useRef(0);
+  const contentHeight = useRef(0);
+  const scrollViewHeight = useRef(0);
 
   const createMutation = useCreateDrinkLog();
 
-  const currentStep = step === 'select-drink' ? 1 : 2;
-  const totalSteps = 2;
+  const smoothScrollToEnd = () => {
+    const maxScroll = Math.max(0, contentHeight.current - scrollViewHeight.current);
+    if (maxScroll <= 0) return;
 
-  const handleNext = () => {
-    if (step === 'select-drink' && selectedDrink) {
-      setStep('select-amount');
-    } else if (step === 'select-amount' && selectedDrink) {
-      const date = selectedDate || new Date().toISOString().split('T')[0];
-      
-      createMutation.mutate(
-        { date, drinkType: selectedDrink, amount },
-        {
-          onSuccess: () => {
-            const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
-            if (isWeb) {
-              window.alert('음주 기록이 저장되었습니다.');
-              onClose?.();
-            } else {
-              Alert.alert('저장 완료', '음주 기록이 저장되었습니다.', [
-                { text: '확인', onPress: onClose },
-              ]);
-            }
-          },
-          onError: (error: any) => {
-            const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
-            const message = error.message || '다시 시도해주세요';
-            if (isWeb) {
-              window.alert(`저장 실패: ${message}`);
-            } else {
-              Alert.alert('저장 실패', message);
-            }
-          },
-        }
-      );
-    }
+    const startY = currentScrollY.current;
+    const distance = maxScroll - startY;
+    
+    scrollY.setValue(0);
+    Animated.timing(scrollY, {
+      toValue: 1,
+      duration: 500,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    scrollY.addListener(({ value }) => {
+      const newY = startY + distance * value;
+      scrollViewRef.current?.scrollTo({ y: newY, animated: false });
+    });
   };
 
-  const handleBack = () => {
-    if (step === 'select-amount') {
-      setStep('select-drink');
-    }
+  const handleSelectDrink = (type: DrinkType) => {
+    setSelectedDrink(type);
+    // 주종 선택 시 수량 선택 영역으로 스무스 스크롤
+    setTimeout(() => {
+      smoothScrollToEnd();
+    }, 300);
+  };
+
+  const handleSave = () => {
+    if (!selectedDrink) return;
+    
+    const date = selectedDate || new Date().toISOString().split('T')[0];
+    
+    createMutation.mutate(
+      { date, drinkType: selectedDrink, amount },
+      {
+        onSuccess: () => {
+          const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
+          if (isWeb) {
+            window.alert('음주 기록이 저장되었습니다.');
+            onClose?.();
+          } else {
+            Alert.alert('저장 완료', '음주 기록이 저장되었습니다.', [
+              { text: '확인', onPress: onClose },
+            ]);
+          }
+        },
+        onError: (error: any) => {
+          const isWeb = typeof window !== 'undefined' && !('ReactNativeWebView' in window);
+          const message = error.message || '다시 시도해주세요';
+          if (isWeb) {
+            window.alert(`저장 실패: ${message}`);
+          } else {
+            Alert.alert('저장 실패', message);
+          }
+        },
+      }
+    );
   };
 
   const getSelectedDrinkLabel = () => {
@@ -105,92 +125,72 @@ export function AddDrinkScreen({ onClose, selectedDate }: Props) {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" />
 
-        <View style={styles.header}>
-          <ProgressBar current={currentStep} total={totalSteps} />
-        </View>
-
         <ScrollView
+          ref={scrollViewRef}
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
+          onScroll={(e) => {
+            currentScrollY.current = e.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
+          onContentSizeChange={(w, h) => {
+            contentHeight.current = h;
+          }}
+          onLayout={(e) => {
+            scrollViewHeight.current = e.nativeEvent.layout.height;
+          }}
         >
-          {step === 'select-drink' ? (
-            <>
-              <View style={styles.questionContainer}>
-                <Text variant="display" color="primary" center>
-                  오늘 뭐 마셨어요?
-                </Text>
-                <Text variant="body" color="secondary" center>
-                  마신 주종을 선택해주세요
-                </Text>
-              </View>
-
-              <View style={styles.grid}>
-                {drinkOptions.map((drink) => (
-                  <View key={drink.type} style={styles.gridItem}>
-                    <DrinkCard
-                      type={drink.type}
-                      label={drink.label}
-                      icon={drink.icon}
-                      selected={selectedDrink === drink.type}
-                      onPress={() => setSelectedDrink(drink.type)}
-                    />
-                  </View>
-                ))}
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={styles.questionContainer}>
-                <Text variant="display" color="primary" center>
-                  얼마나 마셨어요?
-                </Text>
-                <Text variant="body" color="secondary" center>
-                  {getSelectedDrinkLabel()} 몇 병 드셨나요?
-                </Text>
-              </View>
-
-              <Card variant="glass" padding="lg" style={styles.amountCard}>
-                <View style={styles.selectedDrinkPreview}>
-                  <Text style={styles.bigEmoji}>
-                    {drinkOptions.find((d) => d.type === selectedDrink)?.icon}
-                  </Text>
-                  <Text variant="title" color="primary">
-                    {getSelectedDrinkLabel()}
-                  </Text>
+          {/* 주종 선택 */}
+          <View style={styles.section}>
+            <Text variant="title" color="primary">
+              오늘 뭐 마셨어요?
+            </Text>
+            <View style={styles.grid}>
+              {drinkOptions.map((drink) => (
+                <View key={drink.type} style={styles.gridItem}>
+                  <DrinkCard
+                    type={drink.type}
+                    label={drink.label}
+                    icon=""
+                    selected={selectedDrink === drink.type}
+                    onPress={() => handleSelectDrink(drink.type)}
+                  />
                 </View>
+              ))}
+            </View>
+          </View>
 
+          {/* 수량 선택 - 주종 선택 후 표시 */}
+          {selectedDrink && (
+            <View style={styles.section}>
+              <Text variant="title" color="primary">
+                {getSelectedDrinkLabel()} 얼마나 마셨어요?
+              </Text>
+              <View style={styles.amountContainer}>
                 <AmountSelector
                   value={amount}
-                  unit="병"
+                  unit={DRINK_INFO[selectedDrink].unit}
                   min={0.5}
-                  max={20}
+                  max={selectedDrink === 'whiskey' ? 30 : 20}
                   step={0.5}
                   onChange={setAmount}
                 />
-              </Card>
-            </>
+              </View>
+            </View>
           )}
         </ScrollView>
 
         <View style={styles.footer}>
-          <View style={styles.buttonRow}>
-            {step === 'select-amount' && (
-              <Button variant="secondary" size="lg" onPress={handleBack}>
-                이전
-              </Button>
-            )}
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth={step === 'select-drink'}
-              onPress={handleNext}
-              disabled={(step === 'select-drink' && !selectedDrink) || createMutation.isPending}
-              style={step === 'select-amount' ? styles.flexButton : undefined}
-            >
-              {createMutation.isPending ? '저장 중...' : step === 'select-drink' ? '다음' : '저장하기'}
-            </Button>
-          </View>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            onPress={handleSave}
+            disabled={!selectedDrink || createMutation.isPending}
+          >
+            {createMutation.isPending ? '저장 중...' : '저장하기'}
+          </Button>
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -204,21 +204,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-  },
   content: {
     flex: 1,
   },
   contentContainer: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
   },
-  questionContainer: {
-    marginTop: spacing.xl,
+  section: {
     marginBottom: spacing.xl,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   grid: {
     flexDirection: 'row',
@@ -228,27 +224,14 @@ const styles = StyleSheet.create({
   gridItem: {
     width: '47%',
   },
-  amountCard: {
-    marginTop: spacing.lg,
-    gap: spacing.xl,
-  },
-  selectedDrinkPreview: {
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  bigEmoji: {
-    fontSize: 64,
+  amountContainer: {
+    backgroundColor: colors.background.glass,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
   },
   footer: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
     paddingBottom: spacing.xl,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  flexButton: {
-    flex: 1,
   },
 });

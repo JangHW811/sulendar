@@ -14,18 +14,17 @@ import { spacing } from '../../theme/spacing';
 interface HeaderProps {
   title: string;
   subtitle?: string;
-  emoji?: string;
   rightElement?: React.ReactNode;
 }
 
-export function Header({ title, subtitle, emoji, rightElement }: HeaderProps) {
+export function Header({ title, subtitle, rightElement }: HeaderProps) {
   const insets = useSafeAreaInsets();
 
   const content = (
     <View style={[styles.content, { paddingTop: insets.top + spacing.sm }]}>
       <View style={styles.titleRow}>
         <Text variant="display" color="primary">
-          {title} {emoji}
+          {title}
         </Text>
         {rightElement}
       </View>

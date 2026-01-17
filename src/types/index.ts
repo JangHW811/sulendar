@@ -50,11 +50,11 @@ export interface DayData {
 }
 
 // 주종별 정보
-export const DRINK_INFO: Record<DrinkType, { label: string; icon: string; mlPerBottle: number; alcoholPercent: number }> = {
-  soju: { label: '소주', icon: '🍶', mlPerBottle: 360, alcoholPercent: 17 },
-  beer: { label: '맥주', icon: '🍺', mlPerBottle: 500, alcoholPercent: 5 },
-  wine: { label: '와인', icon: '🍷', mlPerBottle: 750, alcoholPercent: 13 },
-  whiskey: { label: '위스키', icon: '🥃', mlPerBottle: 700, alcoholPercent: 40 },
-  makgeolli: { label: '막걸리', icon: '🍵', mlPerBottle: 750, alcoholPercent: 6 },
-  etc: { label: '기타', icon: '🍸', mlPerBottle: 350, alcoholPercent: 15 },
+export const DRINK_INFO: Record<DrinkType, { label: string; icon: string; unit: string; mlPerUnit: number; alcoholPercent: number }> = {
+  soju: { label: '소주', icon: '🍶', unit: '병', mlPerUnit: 360, alcoholPercent: 17 },
+  beer: { label: '맥주', icon: '🍺', unit: '병', mlPerUnit: 500, alcoholPercent: 5 },
+  wine: { label: '와인', icon: '🍷', unit: '병', mlPerUnit: 750, alcoholPercent: 13 },
+  whiskey: { label: '위스키', icon: '🥃', unit: '잔', mlPerUnit: 30, alcoholPercent: 40 },
+  makgeolli: { label: '막걸리', icon: '🍵', unit: '병', mlPerUnit: 750, alcoholPercent: 6 },
+  etc: { label: '기타', icon: '🍸', unit: '잔', mlPerUnit: 150, alcoholPercent: 15 },
 };

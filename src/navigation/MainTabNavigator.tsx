@@ -42,7 +42,12 @@ function TabIcon({ IconComponent, label, focused }: TabIconProps) {
       />
       <Text
         variant="small"
-        style={{ color: focused ? colors.primary.main : colors.text.muted, fontWeight: focused ? '600' : '400' }}
+        style={{ 
+          color: focused ? colors.primary.main : colors.text.muted, 
+          fontWeight: focused ? '600' : '400',
+          fontSize: 11,
+        }}
+        numberOfLines={1}
       >
         {label}
       </Text>
@@ -116,14 +121,19 @@ export function MainTabNavigator({ onAddDrink }: Props) {
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: colors.background.secondary,
-    borderTopColor: colors.border.light,
-    borderTopWidth: 1,
-    height: 80,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
+    borderTopWidth: 0,
+    height: 68,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 10,
   },
   tabIcon: {
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
+    minWidth: 50,
   },
 });

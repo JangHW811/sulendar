@@ -220,7 +220,6 @@ export function GoalsScreen() {
 
       <Header
         title="목표"
-        emoji="🎯"
         subtitle="건강한 음주 습관을 만들어요"
       />
 

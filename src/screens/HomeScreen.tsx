@@ -129,7 +129,6 @@ export function HomeScreen({ onAddDrink }: Props) {
 
       <Header
         title="술렌다"
-        emoji="🍺"
         subtitle="오늘도 건강한 음주 생활!"
       />
 

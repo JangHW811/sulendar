@@ -2,7 +2,7 @@
  * 술렌다 - AI 건강 상담 화면
  */
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Card, Button, Header } from '../components/ui';
@@ -22,6 +23,12 @@ import { useDrinkLogsByDateRange } from '../hooks';
 import { DRINK_INFO } from '../types';
 import { useAuth } from '../context';
 import { geminiService, ChatMessage } from '../services';
+import {
+  loadRewardedAd,
+  showRewardedAd,
+  isRewardedAdReady,
+  isAdMobSupported,
+} from '../services/admob';
 
 interface Message {
   id: string;
@@ -37,7 +44,15 @@ export function ConsultationScreen() {
   const [inputText, setInputText] = useState('');
   const [hasWatchedAd, setHasWatchedAd] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [adLoading, setAdLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // 앱 시작 시 광고 미리 로드
+  useEffect(() => {
+    if (isAdMobSupported()) {
+      loadRewardedAd();
+    }
+  }, []);
 
   // 이번 주 음주 데이터 조회
   const now = new Date();
@@ -68,23 +83,71 @@ export function ConsultationScreen() {
     return { totalMl, drinkDays, mainDrink, logs: weekLogs };
   }, [weekLogs]);
 
-  const handleWatchAd = () => {
-    // TODO: AdMob 리워드 광고 연동
-    // 임시로 2초 후 광고 시청 완료 처리
-    setIsLoading(true);
-    setTimeout(() => {
-      setHasWatchedAd(true);
-      setIsLoading(false);
-      // 환영 메시지 추가
-      setMessages([
-        {
-          id: '0',
-          role: 'assistant',
-          content: `안녕하세요! 저는 술렌다 AI 건강 상담사입니다. 🏥\n\n이번 주 음주 기록을 분석해봤어요:\n• 총 음주량: ${(weeklySummary.totalMl / 1000).toFixed(1)}L\n• 음주일: ${weeklySummary.drinkDays}일\n• 주로 마신 술: ${weeklySummary.mainDrink}\n\n궁금한 점이 있으시면 편하게 물어보세요!`,
-          timestamp: new Date(),
-        },
-      ]);
-    }, 2000);
+  const startConsultation = () => {
+    setHasWatchedAd(true);
+    // 환영 메시지 추가
+    setMessages([
+      {
+        id: '0',
+        role: 'assistant',
+        content: `안녕하세요! 저는 술렌다 AI 건강 상담사입니다. 🏥\n\n이번 주 음주 기록을 분석해봤어요:\n• 총 음주량: ${(weeklySummary.totalMl / 1000).toFixed(1)}L\n• 음주일: ${weeklySummary.drinkDays}일\n• 주로 마신 술: ${weeklySummary.mainDrink}\n\n궁금한 점이 있으시면 편하게 물어보세요!`,
+        timestamp: new Date(),
+      },
+    ]);
+  };
+
+  const handleWatchAd = async () => {
+    // 웹 환경에서는 AdMob 지원 안 함 - 바로 상담 시작
+    if (!isAdMobSupported()) {
+      // 웹에서는 2초 딜레이 후 상담 시작 (UX용)
+      setAdLoading(true);
+      setTimeout(() => {
+        setAdLoading(false);
+        startConsultation();
+      }, 1500);
+      return;
+    }
+
+    // 모바일: AdMob 리워드 광고 표시
+    setAdLoading(true);
+
+    try {
+      // 광고가 준비되지 않았으면 로드
+      if (!isRewardedAdReady()) {
+        const loaded = await loadRewardedAd();
+        if (!loaded) {
+          Alert.alert(
+            '광고 로드 실패',
+            '광고를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.',
+            [{ text: '확인' }]
+          );
+          setAdLoading(false);
+          return;
+        }
+      }
+
+      // 광고 표시
+      const rewarded = await showRewardedAd();
+      
+      if (rewarded) {
+        startConsultation();
+      } else {
+        Alert.alert(
+          '광고 시청 필요',
+          '광고를 끝까지 시청해야 상담을 받을 수 있어요.',
+          [{ text: '확인' }]
+        );
+      }
+    } catch (error) {
+      console.error('Ad error:', error);
+      Alert.alert(
+        '오류',
+        '광고 표시 중 오류가 발생했습니다.',
+        [{ text: '확인' }]
+      );
+    } finally {
+      setAdLoading(false);
+    }
   };
 
   const handleSend = async () => {
@@ -162,7 +225,6 @@ export function ConsultationScreen() {
       {/* Sticky Header */}
       <Header
         title="AI 상담"
-        emoji="🤖"
         subtitle="※ 의학적 조언이 아닌 참고 정보입니다"
       />
 
@@ -196,10 +258,16 @@ export function ConsultationScreen() {
               size="lg"
               fullWidth
               onPress={handleWatchAd}
-              disabled={isLoading}
+              disabled={adLoading}
             >
-              {isLoading ? '광고 로딩 중...' : '광고 보고 상담 시작하기'}
+              {adLoading ? '광고 로딩 중...' : '광고 보고 상담 시작하기'}
             </Button>
+
+            {!isAdMobSupported() && (
+              <Text variant="small" color="muted" center style={styles.webNotice}>
+                웹에서는 광고 없이 바로 시작됩니다
+              </Text>
+            )}
           </Card>
         </View>
       ) : (
@@ -325,6 +393,9 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: spacing.xs,
     marginTop: spacing.xs,
+  },
+  webNotice: {
+    marginTop: spacing.sm,
   },
   chatContainer: {
     flex: 1,
