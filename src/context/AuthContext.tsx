@@ -25,26 +25,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    authService.getSession().then((sess) => {
-      setSession(sess);
-      setUser(sess?.user ?? null);
-      if (sess?.user) {
-        authService.getProfile(sess.user.id).then(setProfile);
+    const initAuth = async () => {
+      try {
+        const sess = await authService.getSession();
+        setSession(sess);
+        setUser(sess?.user ?? null);
+        if (sess?.user) {
+          const prof = await authService.getProfile(sess.user.id);
+          setProfile(prof);
+        }
+      } catch (error) {
+        console.error('Auth init error:', error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    });
+    };
+
+    initAuth();
 
     const { data: { subscription } } = authService.onAuthStateChange(async (event, sess) => {
       setSession(sess);
       setUser(sess?.user ?? null);
       
       if (sess?.user) {
-        // OAuth 로그인 시 프로필 자동 생성 (웹에서 특히 중요)
-        if (event === 'SIGNED_IN') {
-          await authService.ensureProfile(sess.user);
+        try {
+          // OAuth 로그인 시 프로필 자동 생성 (웹에서 특히 중요)
+          if (event === 'SIGNED_IN') {
+            await authService.ensureProfile(sess.user);
+          }
+          const prof = await authService.getProfile(sess.user.id);
+          setProfile(prof);
+        } catch (error) {
+          console.error('Profile fetch error:', error);
         }
-        const prof = await authService.getProfile(sess.user.id);
-        setProfile(prof);
       } else {
         setProfile(null);
       }
